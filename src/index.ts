@@ -1,6 +1,6 @@
 const http = require('http');
 const { Server: SocketServer } = require('socket.io');
-
+require("./types/express/index")
 const { app } = require('./app');
 const { connectDB } = require('./config/db');
 const logger = require('./utils/logger');

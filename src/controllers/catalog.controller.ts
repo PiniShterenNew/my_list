@@ -211,15 +211,17 @@ export const updateProductPrice = async (req: Request, res: Response): Promise<v
       return;
     }
     
-    // עדכן את מחיר המוצר
-    product.price = Number(price);
-    
-    // הוסף לאחר מכן להיסטוריה
-    product.priceHistory.push({
-      price: Number(price),
-      supermarket,
-      date: new Date(),
-    });
+    const newPrice = Number(price);
+
+if (product.price !== newPrice) {
+  product.price = newPrice;
+
+  product.priceHistory.push({
+    price: newPrice,
+    supermarket,
+    date: new Date(),
+  });
+}
     
     await product.save();
     

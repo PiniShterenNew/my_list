@@ -75,12 +75,10 @@ describe('Auth Controller Tests', () => {
   describe('POST /api/auth/login', () => {
     beforeEach(async () => {
       // צור משתמש לבדיקת התחברות
-      const salt = await require('bcrypt').genSalt(10);
-      const hash = await require('bcrypt').hash('password123', salt);
       
       await User.create({
         email: 'test@example.com',
-        passwordHash: hash,
+        passwordHash: 'password123',
         name: 'משתמש בדיקה'
       });
     });
@@ -152,20 +150,18 @@ describe('Auth Controller Tests', () => {
     
     beforeEach(async () => {
       // צור משתמש ורענן טוקן
-      const salt = await require('bcrypt').genSalt(10);
-      const hash = await require('bcrypt').hash('password123', salt);
       
       const user = await User.create({
         email: 'test@example.com',
-        passwordHash: hash,
+        passwordHash: 'password123',
         name: 'משתמש בדיקה'
       });
       
       userId = (user._id as any).toString();
       
       // צור refresh token
-      refreshToken = user.getRefreshToken();
-      await user.save();
+      refreshToken = await user.getRefreshToken();
+await User.updateOne({ _id: user._id }, { $push: { refreshTokens: refreshToken } });
     });
     
     it('should refresh access token with valid refresh token', async () => {
@@ -200,21 +196,16 @@ describe('Auth Controller Tests', () => {
     
     it('should not refresh if refresh token not found in user', async () => {
       // צור משתמש אחר עם טוקן משלו
-      const salt = await require('bcrypt').genSalt(10);
-      const hash = await require('bcrypt').hash('password123', salt);
       
       const otherUser = await User.create({
         email: 'other@example.com',
-        passwordHash: hash,
+        passwordHash: 'password123',
         name: 'משתמש אחר'
       });
       
-      const otherRefreshToken = otherUser.getRefreshToken();
-      await otherUser.save();
-      
-      // מחק את הטוקן מהמשתמש
-      otherUser.refreshTokens = [];
-      await otherUser.save();
+      const otherRefreshToken = await otherUser.getRefreshToken();
+      otherUser.refreshTokens = []; // עדכן את השדה אחרי שקיבלת את הטוקן
+      await otherUser.save(); // שמירה אחת בלבד
       
       // נסה לרענן עם טוקן שכבר אינו קיים
       const response = await request(app)
@@ -233,12 +224,10 @@ describe('Auth Controller Tests', () => {
     
     beforeEach(async () => {
       // צור משתמש וטוקן
-      const salt = await require('bcrypt').genSalt(10);
-      const hash = await require('bcrypt').hash('password123', salt);
       
       user = await User.create({
         email: 'test@example.com',
-        passwordHash: hash,
+        passwordHash: 'password123',
         name: 'משתמש בדיקה',
         avatar: 'https://example.com/avatar.jpg'
       });
@@ -292,12 +281,10 @@ describe('Auth Controller Tests', () => {
     
     beforeEach(async () => {
       // צור משתמש וטוקנים
-      const salt = await require('bcrypt').genSalt(10);
-      const hash = await require('bcrypt').hash('password123', salt);
       
       user = await User.create({
         email: 'test@example.com',
-        passwordHash: hash,
+        passwordHash: 'password123',
         name: 'משתמש בדיקה'
       });
       
@@ -307,8 +294,8 @@ describe('Auth Controller Tests', () => {
         { expiresIn: '15m' }
       );
       
-      refreshToken = user.getRefreshToken();
-      await user.save();
+      refreshToken = await user.getRefreshToken();
+await User.updateOne({ _id: user._id }, { $push: { refreshTokens: refreshToken } });
     });
     
     it('should logout and remove refresh token', async () => {

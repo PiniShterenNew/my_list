@@ -332,10 +332,9 @@ export const toggleListItemCheck = async (req: Request, res: Response): Promise<
     const listId = req.params.id;
     const itemId = req.params.itemId;
     const { isChecked } = req.body;
-    
-    // וודא שהרשימה קיימת והמשתמש רשאי לגשת אליה
+
+    // וודא שהרשימה קיימת
     const list = await List.findById(listId);
-    
     if (!list) {
       res.status(404).json({
         success: false,
@@ -345,12 +344,14 @@ export const toggleListItemCheck = async (req: Request, res: Response): Promise<
     }
 
     // בדוק הרשאות - גם הרשאת צפייה בלבד מספיקה לסימון פריט
-    const isOwner = list.owner.toString() === req.user._id.toString();
-    const isShared = list.sharedWith.some(
+    const shareData = list.sharedWith.find(
       (share: any) => share.userId.toString() === req.user._id.toString()
     );
+    const isOwner = list.owner.toString() === req.user._id.toString();
+    const hasPermission =
+      isOwner || (shareData && ['view', 'edit', 'admin'].includes(shareData.permissions));
 
-    if (!isOwner && !isShared) {
+    if (!hasPermission) {
       res.status(403).json({
         success: false,
         error: 'אין לך הרשאה לעדכן פריטים ברשימה זו',
@@ -360,7 +361,6 @@ export const toggleListItemCheck = async (req: Request, res: Response): Promise<
 
     // וודא שהפריט קיים ושייך לרשימה המבוקשת
     let item = await ListItem.findOne({ _id: itemId, listId });
-    
     if (!item) {
       res.status(404).json({
         success: false,
@@ -371,21 +371,20 @@ export const toggleListItemCheck = async (req: Request, res: Response): Promise<
 
     // עדכן את הסטטוס
     item.isChecked = isChecked === undefined ? !item.isChecked : Boolean(isChecked);
-    
+
     // עדכן את תאריך הרכישה אם הפריט סומן
     if (item.isChecked) {
       item.checkedAt = new Date();
     } else {
       item.checkedAt = undefined;
     }
-    
+
     await item.save();
 
     res.status(200).json({
       success: true,
       data: item,
     });
-    return;
   } catch (error: any) {
     logger.error(`Toggle list item check error: ${error.message}`);
     res.status(500).json({
@@ -393,6 +392,5 @@ export const toggleListItemCheck = async (req: Request, res: Response): Promise<
       error: 'שגיאה בסימון/ביטול סימון פריט ברשימה',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
-    return;
   }
 };

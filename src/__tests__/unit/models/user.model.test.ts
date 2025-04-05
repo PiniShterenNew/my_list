@@ -118,7 +118,7 @@ describe('User Model Tests', () => {
     expect(user.refreshTokens).toHaveLength(0);
     
     // צור טוקן רענון
-    const refreshToken = user.getRefreshToken();
+    const refreshToken = await user.getRefreshToken();
     
     // שמור את המשתמש כדי שהטוקן יישמר (עכשיו הפונקציה לא שומרת אוטומטית)
     await user.save();
@@ -131,33 +131,33 @@ describe('User Model Tests', () => {
     expect(updatedUser!.refreshTokens[0]).toBe(refreshToken);
   });
 
-  it('should limit refresh tokens to 5', async () => {
-    const user = await User.create({
-      email: 'test@example.com',
-      passwordHash: 'password123',
-      name: 'משתמש בדיקה',
-    });
-    
-    // צור 6 טוקנים
-    const tokens: string[] = [];
-    for (let i = 0; i < 6; i++) {
-      const token = user.getRefreshToken();
-      tokens.push(token);
-      await user.save();
-    }
-    
-    // טען את המשתמש מחדש
-    const updatedUser = await User.findById(user._id);
-    
-    // בדוק שיש רק 5 טוקנים
-    expect(updatedUser!.refreshTokens).toHaveLength(5);
-    
-    // בדוק שהטוקן הראשון שנוצר אינו נמצא ברשימה (הוא הוסר)
-    expect(updatedUser!.refreshTokens).not.toContain(tokens[0]);
-    
-    // בדוק שהטוקן האחרון שנוצר נמצא ברשימה
-    expect(updatedUser!.refreshTokens).toContain(tokens[5]);
+ it('should limit refresh tokens to 5', async () => {
+  const user = await User.create({
+    email: 'test@example.com',
+    passwordHash: 'password123',
+    name: 'משתמש בדיקה',
   });
+  
+  // צור 6 טוקנים
+  const tokens: string[] = [];
+  for (let i = 0; i < 10; i++) {
+    const token = await user.getRefreshToken();
+    user.refreshTokens.push(token);
+  }
+  await user.save(); // ← שמור רק פעם אחת
+  
+  // טען את המשתמש מחדש
+  const updatedUser = await User.findById(user._id);
+  
+  // בדוק שיש רק 5 טוקנים
+  expect(updatedUser!.refreshTokens).toHaveLength(5);
+  
+  // בדוק שהטוקן הראשון שנוצר אינו נמצא ברשימה (הוא הוסר)
+  expect(updatedUser!.refreshTokens).not.toContain(tokens[0]);
+  
+  // בדוק שהטוקן האחרון שנוצר נמצא ברשימה
+  expect(updatedUser!.refreshTokens).toContain(tokens[5]);
+});
 
   it('should validate email format', async () => {
     try {

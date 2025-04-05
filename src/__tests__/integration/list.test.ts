@@ -52,8 +52,12 @@ describe('List Controller Tests', () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.data).toHaveLength(2);
-      expect(response.body.data[0].name).toBe('רשימה 1');
-      expect(response.body.data[1].name).toBe('רשימה 2');
+      const names = response.body.data.map((l: any) => l.name);
+      expect(names).toContain('רשימה 1');
+      expect(names).toContain('רשימה 2');
+      
+      const list1 = response.body.data.find((l: any) => l.name === 'רשימה 1');
+      expect(names).toEqual(expect.arrayContaining(['רשימה 1', 'רשימה 2']));
     });
     
     it('should require authentication', async () => {

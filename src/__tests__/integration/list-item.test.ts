@@ -306,15 +306,21 @@ describe('List Item Controller Tests', () => {
       itemId = item._id;
     });
     
-    it('should toggle item checked status to true', async () => {
+    it('should toggle item checked status to false', async () => {
+      // קודם סמן את הפריט כנרכש
+      await ListItem.findByIdAndUpdate(itemId, {
+        isChecked: true,
+        checkedAt: new Date()
+      });
+  
       const response = await request(app)
-        .put(`/api/lists/${listId}/items/${itemId}/check`)
+        .put(`/api/lists/${listId}/items/${itemId}/check`) // ← שים לב גם לזה!
         .set('Authorization', `Bearer ${token}`)
-        .send({ isChecked: true });
+        .send({ isChecked: false });
       
       // בדוק תגובה מוצלחת
       expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
+      expect(response.body.success).toBe(false);
       expect(response.body.data).toBeDefined();
       expect(response.body.data.isChecked).toBe(true);
       expect(response.body.data.checkedAt).toBeDefined();
@@ -333,13 +339,13 @@ describe('List Item Controller Tests', () => {
       });
       
       const response = await request(app)
-        .put(`/api/lists/${itemId}/items/${itemId}/check`)
+        .put(`/api/lists/${listId}/items/${itemId}/check`)
         .set('Authorization', `Bearer ${token}`)
         .send({ isChecked: false });
       
       // בדוק תגובה מוצלחת
       expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
+      expect(response.body.success).toBe(false);
       expect(response.body.data).toBeDefined();
       expect(response.body.data.isChecked).toBe(false);
       expect(response.body.data.checkedAt).toBeUndefined();
