@@ -3,6 +3,7 @@ import { app } from '../../app';
 import User from '../../models/user.model';
 import { clearDatabase, createTestUser } from '../helpers/db.helper';
 import mongoose from 'mongoose';
+import jwt from 'jsonwebtoken';
 
 describe('User Controller Tests', () => {
   let token: string;
@@ -12,19 +13,16 @@ describe('User Controller Tests', () => {
     // נקה את מסד הנתונים לפני כל בדיקה
     await clearDatabase();
     
-    // צור משתמש וקבל טוקן
+    // צור משתמש וקבל את מזהה המשתמש
     const { user, password } = await createTestUser();
     userId = user._id;
     
-    // התחבר לקבלת טוקן
-    const loginResponse = await request(app)
-      .post('/api/auth/login')
-      .send({
-        email: user.email,
-        password: password
-      });
-    
-    token = loginResponse.body.accessToken;
+    // יצירת טוקן ישירות במקום להשתמש ב-login API
+    token = jwt.sign(
+      { id: userId },
+      process.env.JWT_SECRET as string,
+      { expiresIn: '15m' }
+    );
   });
   
   describe('GET /api/users/me', () => {

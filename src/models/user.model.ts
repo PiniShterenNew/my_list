@@ -138,7 +138,7 @@ UserSchema.methods.getSignedJwtToken = function (): string {
 };
 
 // מתודה ליצירת Refresh Token
-UserSchema.methods.getRefreshToken = async function (): Promise<string> {
+UserSchema.methods.getRefreshToken = function (): string {
   const secret = process.env.REFRESH_TOKEN_SECRET as string;
   const options: jwt.SignOptions = {
     expiresIn: (process.env.REFRESH_TOKEN_EXPIRE ?? '7d') as ms.StringValue | number,
@@ -153,13 +153,16 @@ UserSchema.methods.getRefreshToken = async function (): Promise<string> {
   // שמור את הrefresh token במסד הנתונים
   this.refreshTokens = this.refreshTokens || [];
 
+  // הגבל את מספר הטוקנים ל-5
   if (this.refreshTokens.length >= 5) {
-    this.refreshTokens.shift(); // הסר את הטוקן הישן ביותר
+    this.refreshTokens = this.refreshTokens.slice(-4); // שמור רק את ארבעת הטוקנים האחרונים
   }
 
   this.refreshTokens.push(refreshToken);
-  await this.save(); // ← הוסף await כאן
-
+  
+  // שים לב: אנחנו כבר לא קוראים ל-save כאן, זה יגרום לבעיות
+  // save צריך להיקרא בקוד החיצוני
+  
   return refreshToken;
 };
 

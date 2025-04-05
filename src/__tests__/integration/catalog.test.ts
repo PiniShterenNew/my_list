@@ -4,30 +4,32 @@ import { clearDatabase, createTestUser, createTestCategories, createTestProduct 
 import mongoose from 'mongoose';
 import Product from '../../models/product.model';
 import Category from '../../models/category.model';
+import jwt from 'jsonwebtoken';
 
 describe('Catalog Controller Tests', () => {
   let token: string;
-  jest.setTimeout(15000); // או אפילו 20000
+  let userId: string;
+  
+  // הגדל את הזמן המוקצב לבדיקות
+  jest.setTimeout(15000);
+  
   beforeEach(async () => {
     // נקה את מסד הנתונים לפני כל בדיקה
-  
     await clearDatabase();
     
     // צור קטגוריות בסיסיות
     await createTestCategories();
     
-    // צור משתמש וקבל טוקן
+    // צור משתמש וקבל את ה-ID שלו
     const { user, password } = await createTestUser();
+    userId = user._id;
     
-    // התחבר לקבלת טוקן
-    const loginResponse = await request(app)
-      .post('/api/auth/login')
-      .send({
-        email: user.email,
-        password: password
-      });
-    
-    token = loginResponse.body.accessToken;
+    // יצירת טוקן ישירות (בלי להשתמש ב-API של התחברות)
+    token = jwt.sign(
+      { id: userId },
+      process.env.JWT_SECRET as string,
+      { expiresIn: '15m' }
+    );
   });
   
   describe('GET /api/catalog', () => {
@@ -201,10 +203,10 @@ describe('Catalog Controller Tests', () => {
         .get('/api/catalog/categories/nonexistent')
         .set('Authorization', `Bearer ${token}`);
       
-      // בדוק תגובת שגיאה
+      // בדוק תגובת שגיאה - שים לב שההודעה בעברית
       expect(response.status).toBe(404);
       expect(response.body.success).toBe(false);
-      expect(response.body.error).toContain('לא נמצאה');
+      expect(response.body.error).toContain('הקטגוריה לא נמצאה');
     });
   });
   
@@ -244,13 +246,13 @@ describe('Catalog Controller Tests', () => {
     });
     
     it('should handle non-existent product', async () => {
-      const fakeId = new mongoose.Types.ObjectId();
+      const fakeId = new mongoose.Types.ObjectId().toString();
       
       const response = await request(app)
         .get(`/api/catalog/products/${fakeId}`)
         .set('Authorization', `Bearer ${token}`);
       
-      // בדוק תגובת שגיאה
+      // בדוק תגובת שגיאה - שים לב שההודעה בעברית
       expect(response.status).toBe(404);
       expect(response.body.success).toBe(false);
       expect(response.body.error).toContain('לא נמצא');
@@ -292,7 +294,7 @@ describe('Catalog Controller Tests', () => {
         .get('/api/catalog/barcode/9999999999999')
         .set('Authorization', `Bearer ${token}`);
       
-      // בדוק תגובת שגיאה
+      // בדוק תגובת שגיאה - שים לב שההודעה בעברית
       expect(response.status).toBe(404);
       expect(response.body.success).toBe(false);
       expect(response.body.error).toContain('לא נמצא מוצר');
@@ -344,7 +346,7 @@ describe('Catalog Controller Tests', () => {
         .set('Authorization', `Bearer ${token}`)
         .send({ price: 'invalid-price' });
       
-      // בדוק תגובת שגיאה
+      // בדוק תגובת שגיאה - שים לב שההודעה בעברית
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
       expect(response.body.error).toContain('מחיר תקף');

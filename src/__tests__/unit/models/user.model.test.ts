@@ -2,11 +2,12 @@ import User from '../../../models/user.model';
 import { clearDatabase } from '../../helpers/db.helper';
 import bcrypt from 'bcrypt';
 import mongoose from 'mongoose';
-jest.setTimeout(15000); // או אפילו 20000
+
+jest.setTimeout(15000); // הגדל את הזמן המוקצב לבדיקות
+
 describe('User Model Tests', () => {
   // נקה את מסד הנתונים לפני כל הבדיקות
   beforeEach(async () => {
-   
     await clearDatabase();
   });
 
@@ -119,6 +120,9 @@ describe('User Model Tests', () => {
     // צור טוקן רענון
     const refreshToken = user.getRefreshToken();
     
+    // שמור את המשתמש כדי שהטוקן יישמר (עכשיו הפונקציה לא שומרת אוטומטית)
+    await user.save();
+    
     // טען את המשתמש מחדש
     const updatedUser = await User.findById(user._id);
     
@@ -132,19 +136,20 @@ describe('User Model Tests', () => {
       email: 'test@example.com',
       passwordHash: 'password123',
       name: 'משתמש בדיקה',
-      refreshTokens: []
     });
     
     // צור 6 טוקנים
-    const tokens:string[] = [];
+    const tokens: string[] = [];
     for (let i = 0; i < 6; i++) {
-      tokens.push(await user.getRefreshToken());
+      tokens.push(user.getRefreshToken());
+      // שמור אחרי כל טוקן, כי הפונקציה לא שומרת יותר באופן אוטומטי
+      await user.save();
     }
     
     // טען את המשתמש מחדש
     const updatedUser = await User.findById(user._id);
     
-    // בדוק שיש רק 5 טוקנים
+    // בדוק שיש רק 5 טוקנים (הראשון נמחק)
     expect(updatedUser!.refreshTokens).toHaveLength(5);
     
     // בדוק שהטוקן הראשון הוסר והאחרון קיים

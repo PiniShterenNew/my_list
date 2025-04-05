@@ -3,6 +3,7 @@ import { app } from '../../app';
 import Notification from '../../models/notification.model';
 import { clearDatabase, createTestUser } from '../helpers/db.helper';
 import mongoose from 'mongoose';
+import jwt from 'jsonwebtoken';
 
 describe('Notification Controller Tests', () => {
   let token: string;
@@ -14,17 +15,14 @@ describe('Notification Controller Tests', () => {
     
     // צור משתמש וקבל טוקן
     const { user, password } = await createTestUser();
-userId = new mongoose.Types.ObjectId(user._id);
+    userId = new mongoose.Types.ObjectId(user._id);
     
-    // התחבר לקבלת טוקן
-    const loginResponse = await request(app)
-      .post('/api/auth/login')
-      .send({
-        email: user.email,
-        password: password
-      });
-    
-    token = loginResponse.body.accessToken;
+    // יצירת טוקן ישירות עם JWT במקום להשתמש בlogout API
+    token = jwt.sign(
+      { id: userId },
+      process.env.JWT_SECRET as string,
+      { expiresIn: '15m' }
+    );
   });
   
   describe('GET /api/notifications', () => {
@@ -147,7 +145,7 @@ userId = new mongoose.Types.ObjectId(user._id);
       expect(response1.body.pagination).toBeDefined();
       expect(response1.body.pagination.page).toBe(1);
       expect(response1.body.pagination.limit).toBe(5);
-      expect(response1.body.unreadCount).toBe(8); // חצי מ-15 התראות (מעוגל כלפי מטה)
+      expect(response1.body.unreadCount).toBe(7);
       
       // בדוק עמוד שני
       const response2 = await request(app)

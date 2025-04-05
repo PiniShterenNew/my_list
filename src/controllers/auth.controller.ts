@@ -125,7 +125,7 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const user = req.user;
+    const user = (req as any).user;
     if (user) {
       user.refreshTokens = user.refreshTokens.filter((token: string) => token !== refreshToken);
       await user.save();
@@ -149,7 +149,7 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
 // @access  פרטי
 export const getMe = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = req.user;
+    const user = (req as any).user;
     res.status(200).json({ success: true, data: user });
     return;
   } catch (error: any) {
