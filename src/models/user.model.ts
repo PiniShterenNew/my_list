@@ -121,23 +121,29 @@ UserSchema.methods.matchPassword = async function (enteredPassword: string): Pro
 
 // מתודה ליצירת JWT
 UserSchema.methods.getSignedJwtToken = function (): string {
+  const secret = process.env.JWT_SECRET as string;
+  const options: jwt.SignOptions = {
+    expiresIn: process.env.JWT_EXPIRE || '15m'
+  };
+  
   return jwt.sign(
     { id: this._id },
-    process.env.JWT_SECRET as string,
-    {
-      expiresIn: process.env.JWT_EXPIRE || '15m',
-    }
+    secret,
+    options
   );
 };
 
 // מתודה ליצירת Refresh Token
 UserSchema.methods.getRefreshToken = function (): string {
+  const secret = process.env.REFRESH_TOKEN_SECRET as string;
+  const options: jwt.SignOptions = {
+    expiresIn: process.env.REFRESH_TOKEN_EXPIRE || '7d'
+  };
+  
   const refreshToken = jwt.sign(
     { id: this._id },
-    process.env.REFRESH_TOKEN_SECRET as string,
-    {
-      expiresIn: process.env.REFRESH_TOKEN_EXPIRE || '7d',
-    }
+    secret,
+    options
   );
 
   // שמור את הrefresh token במסד הנתונים

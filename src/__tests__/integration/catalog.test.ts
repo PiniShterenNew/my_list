@@ -208,7 +208,7 @@ describe('Catalog Controller Tests', () => {
   });
   
   describe('GET /api/catalog/products/:id', () => {
-    let productId: mongoose.Types.ObjectId;
+    let productId: string;
     
     beforeEach(async () => {
       // צור מוצר לבדיקות
@@ -233,7 +233,7 @@ describe('Catalog Controller Tests', () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.data).toBeDefined();
-      expect(response.body.data._id).toBe(productId.toString());
+      expect(response.body.data._id).toBe(productId);
       expect(response.body.data.name).toBe('מוצר לבדיקה');
       expect(response.body.data.price).toBe(12.50);
       
@@ -299,7 +299,7 @@ describe('Catalog Controller Tests', () => {
   });
   
   describe('PUT /api/catalog/products/:id/price', () => {
-    let productId: mongoose.Types.ObjectId;
+    let productId: string;
     
     beforeEach(async () => {
       // צור מוצר לבדיקות

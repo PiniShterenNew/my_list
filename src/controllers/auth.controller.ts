@@ -109,7 +109,14 @@ export const refreshToken = async (req: Request, res: Response) => {
     const decoded = jwt.verify(
       refreshToken,
       process.env.REFRESH_TOKEN_SECRET as string
-    ) as { id: string };
+    ) as jwt.JwtPayload;
+
+    if (!decoded || !decoded.id) {
+      return res.status(401).json({
+        success: false,
+        error: 'Refresh token לא תקף',
+      });
+    }
 
     // מצא את המשתמש
     const user = await User.findById(decoded.id);
@@ -130,7 +137,9 @@ export const refreshToken = async (req: Request, res: Response) => {
     }
 
     // צור access token חדש
-    const accessToken = user.getSignedJwtToken();
+    const accessToken = generateToken(user._id.toString(), 
+      process.env.JWT_SECRET as string, 
+      process.env.JWT_EXPIRE || '15m');
 
     res.status(200).json({
       success: true,
@@ -207,10 +216,23 @@ export const getMe = async (req: Request, res: Response) => {
   }
 };
 
+// פונקציה ליצירת JWT
+const generateToken = (id: string, secret: string, expiresIn: string): string => {
+  return jwt.sign(
+    { id },
+    secret,
+    { expiresIn }
+  );
+};
+
 // פונקציית עזר לשליחת תגובת טוקנים
 const sendTokenResponse = (user: any, statusCode: number, res: Response) => {
   // צור JWT
-  const accessToken = user.getSignedJwtToken();
+  const accessToken = generateToken(
+    user._id.toString(),
+    process.env.JWT_SECRET as string,
+    process.env.JWT_EXPIRE || '15m'
+  );
   
   // צור refresh token
   const refreshToken = user.getRefreshToken();

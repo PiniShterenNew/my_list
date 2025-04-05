@@ -75,13 +75,14 @@ describe('Auth Controller Tests', () => {
   describe('POST /api/auth/login', () => {
     beforeEach(async () => {
       // צור משתמש לבדיקת התחברות
-      const user = new User({
+      const salt = await require('bcrypt').genSalt(10);
+      const hash = await require('bcrypt').hash('password123', salt);
+      
+      await User.create({
         email: 'test@example.com',
-        passwordHash: 'password123',
+        passwordHash: hash,
         name: 'משתמש בדיקה'
       });
-      
-      await user.save();
     });
     
     it('should login successfully with correct credentials', async () => {
@@ -151,13 +152,15 @@ describe('Auth Controller Tests', () => {
     
     beforeEach(async () => {
       // צור משתמש ורענן טוקן
-      const user = new User({
+      const salt = await require('bcrypt').genSalt(10);
+      const hash = await require('bcrypt').hash('password123', salt);
+      
+      const user = await User.create({
         email: 'test@example.com',
-        passwordHash: 'password123',
+        passwordHash: hash,
         name: 'משתמש בדיקה'
       });
       
-      await user.save();
       userId = user._id.toString();
       
       // צור refresh token
@@ -197,13 +200,15 @@ describe('Auth Controller Tests', () => {
     
     it('should not refresh if refresh token not found in user', async () => {
       // צור משתמש אחר עם טוקן משלו
-      const otherUser = new User({
+      const salt = await require('bcrypt').genSalt(10);
+      const hash = await require('bcrypt').hash('password123', salt);
+      
+      const otherUser = await User.create({
         email: 'other@example.com',
-        passwordHash: 'password123',
+        passwordHash: hash,
         name: 'משתמש אחר'
       });
       
-      await otherUser.save();
       const otherRefreshToken = otherUser.getRefreshToken();
       await otherUser.save();
       
@@ -228,15 +233,22 @@ describe('Auth Controller Tests', () => {
     
     beforeEach(async () => {
       // צור משתמש וטוקן
-      user = new User({
+      const salt = await require('bcrypt').genSalt(10);
+      const hash = await require('bcrypt').hash('password123', salt);
+      
+      user = await User.create({
         email: 'test@example.com',
-        passwordHash: 'password123',
+        passwordHash: hash,
         name: 'משתמש בדיקה',
         avatar: 'https://example.com/avatar.jpg'
       });
       
-      await user.save();
-      token = user.getSignedJwtToken();
+      // צור טוקן באופן ידני
+      token = jwt.sign(
+        { id: user._id.toString() },
+        process.env.JWT_SECRET as string,
+        { expiresIn: '15m' }
+      );
     });
     
     it('should get current user details with valid token', async () => {
@@ -280,14 +292,21 @@ describe('Auth Controller Tests', () => {
     
     beforeEach(async () => {
       // צור משתמש וטוקנים
-      user = new User({
+      const salt = await require('bcrypt').genSalt(10);
+      const hash = await require('bcrypt').hash('password123', salt);
+      
+      user = await User.create({
         email: 'test@example.com',
-        passwordHash: 'password123',
+        passwordHash: hash,
         name: 'משתמש בדיקה'
       });
       
-      await user.save();
-      token = user.getSignedJwtToken();
+      token = jwt.sign(
+        { id: user._id.toString() },
+        process.env.JWT_SECRET as string,
+        { expiresIn: '15m' }
+      );
+      
       refreshToken = user.getRefreshToken();
       await user.save();
     });

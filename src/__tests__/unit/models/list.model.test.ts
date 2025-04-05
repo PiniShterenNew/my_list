@@ -4,7 +4,7 @@ import { clearDatabase } from '../../helpers/db.helper';
 import mongoose from 'mongoose';
 
 describe('List Model Tests', () => {
-  let userId: mongoose.Types.ObjectId;
+  let userId: string;
   
   // לפני כל הבדיקות
   beforeEach(async () => {
@@ -18,7 +18,7 @@ describe('List Model Tests', () => {
       name: 'משתמש בדיקה'
     });
     
-    userId = user._id;
+    userId = user._id.toString();
   });
   
   it('should create a list successfully', async () => {

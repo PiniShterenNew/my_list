@@ -48,7 +48,7 @@ export const createTestUser = async (
   });
   
   // החזר את המשתמש והסיסמה המקורית
-  return { user, password };
+  return { user: user.toObject({ getters: true }), password };
 };
 
 /**
@@ -58,7 +58,7 @@ export const createTestList = async (
   userId: mongoose.Types.ObjectId | string,
   overrides: Partial<any> = {}
 ) => {
-  return await List.create({
+  const list = await List.create({
     name: 'רשימת בדיקה',
     description: 'תיאור רשימת בדיקה',
     type: 'oneTime',
@@ -77,6 +77,8 @@ export const createTestList = async (
     tags: ['test'],
     ...overrides
   });
+  
+  return list.toObject({ getters: true });
 };
 
 /**
@@ -87,7 +89,7 @@ export const createTestListItem = async (
   userId: mongoose.Types.ObjectId | string,
   overrides: Partial<any> = {}
 ) => {
-  return await ListItem.create({
+  const item = await ListItem.create({
     listId,
     name: 'פריט בדיקה',
     category: {
@@ -101,6 +103,8 @@ export const createTestListItem = async (
     addedBy: userId,
     ...overrides
   });
+  
+  return item.toObject({ getters: true });
 };
 
 /**
@@ -109,7 +113,7 @@ export const createTestListItem = async (
 export const createTestProduct = async (
   overrides: Partial<any> = {}
 ) => {
-  return await Product.create({
+  const product = await Product.create({
     name: 'מוצר בדיקה',
     barcode: `test${Date.now()}`,
     description: 'תיאור מוצר בדיקה',
@@ -125,6 +129,8 @@ export const createTestProduct = async (
     allergens: [],
     ...overrides
   });
+  
+  return product.toObject({ getters: true });
 };
 
 /**
