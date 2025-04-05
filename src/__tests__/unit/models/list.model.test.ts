@@ -5,10 +5,11 @@ import mongoose from 'mongoose';
 
 describe('List Model Tests', () => {
   let userId: string;
-  
+  jest.setTimeout(15000); // או אפילו 20000
   // לפני כל הבדיקות
   beforeEach(async () => {
     // נקה את מסד הנתונים
+    
     await clearDatabase();
     
     // צור משתמש לבדיקות

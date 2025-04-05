@@ -53,7 +53,6 @@ CategorySchema.methods.getChildCategories = async function() {
 };
 
 // אינדקסים
-CategorySchema.index({ code: 1 });
 CategorySchema.index({ name: 1 });
 CategorySchema.index({ customOrder: 1 });
 

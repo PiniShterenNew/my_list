@@ -1,14 +1,10 @@
 const http = require('http');
 const { Server: SocketServer } = require('socket.io');
-const dotenv = require('dotenv');
 
 const { app } = require('./app');
 const { connectDB } = require('./config/db');
 const logger = require('./utils/logger');
 const { initSocketService } = require('./services/socket.service');
-
-// Load environment variables
-dotenv.config();
 
 // Create HTTP server
 const server = http.createServer(app);

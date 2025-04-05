@@ -10,11 +10,14 @@ const userRoutes = require('./routes/user.routes');
 const listRoutes = require('./routes/list.routes');
 const catalogRoutes = require('./routes/catalog.routes');
 const notificationRoutes = require('./routes/notification.routes');
+const path = require('path');
 
 // Load environment variables - אם כבר נטענו, לא יטענו שוב
-if (!process.env.NODE_ENV) {
-  dotenv.config();
-}
+dotenv.config({
+  path: process.env.NODE_ENV === 'test'
+    ? path.resolve(process.cwd(), '.env.test')
+    : path.resolve(process.cwd(), '.env')
+});
 
 // Initialize express app
 const app = express();

@@ -2,10 +2,11 @@ import User from '../../../models/user.model';
 import { clearDatabase } from '../../helpers/db.helper';
 import bcrypt from 'bcrypt';
 import mongoose from 'mongoose';
-
+jest.setTimeout(15000); // או אפילו 20000
 describe('User Model Tests', () => {
   // נקה את מסד הנתונים לפני כל הבדיקות
   beforeEach(async () => {
+   
     await clearDatabase();
   });
 

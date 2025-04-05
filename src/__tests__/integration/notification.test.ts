@@ -14,7 +14,7 @@ describe('Notification Controller Tests', () => {
     
     // צור משתמש וקבל טוקן
     const { user, password } = await createTestUser();
-    userId = user._id;
+userId = new mongoose.Types.ObjectId(user._id);
     
     // התחבר לקבלת טוקן
     const loginResponse = await request(app)

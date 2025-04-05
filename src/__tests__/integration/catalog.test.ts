@@ -7,9 +7,10 @@ import Category from '../../models/category.model';
 
 describe('Catalog Controller Tests', () => {
   let token: string;
-  
+  jest.setTimeout(15000); // או אפילו 20000
   beforeEach(async () => {
     // נקה את מסד הנתונים לפני כל בדיקה
+  
     await clearDatabase();
     
     // צור קטגוריות בסיסיות

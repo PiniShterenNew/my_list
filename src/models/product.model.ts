@@ -141,7 +141,6 @@ ProductSchema.methods.addPriceToHistory = function(price: number, supermarket?: 
 };
 
 // אינדקסים
-ProductSchema.index({ barcode: 1 });
 ProductSchema.index({ name: 'text', description: 'text' });
 ProductSchema.index({ popularity: -1 });
 
