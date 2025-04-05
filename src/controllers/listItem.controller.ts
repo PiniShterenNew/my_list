@@ -9,7 +9,7 @@ import logger from '../utils/logger';
 // @desc    קבלת כל הפריטים ברשימה
 // @route   GET /api/lists/:id/items
 // @access  פרטי
-export const getListItems = async (req: Request, res: Response) => {
+export const getListItems = async (req: Request, res: Response): Promise<void> => {
   try {
     const listId = req.params.id;
     
@@ -17,10 +17,11 @@ export const getListItems = async (req: Request, res: Response) => {
     const list = await List.findById(listId);
     
     if (!list) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'הרשימה לא נמצאה',
       });
+      return;
     }
 
     // בדוק הרשאות
@@ -30,10 +31,11 @@ export const getListItems = async (req: Request, res: Response) => {
     );
 
     if (!isOwner && !isShared) {
-      return res.status(403).json({
+      res.status(403).json({
         success: false,
         error: 'אין לך הרשאה לגשת לרשימה זו',
       });
+      return;
     }
 
     // קבל את כל הפריטים ברשימה
@@ -53,6 +55,7 @@ export const getListItems = async (req: Request, res: Response) => {
       count: items.length,
       data: items,
     });
+    return;
   } catch (error: any) {
     logger.error(`Get list items error: ${error.message}`);
     res.status(500).json({
@@ -60,13 +63,14 @@ export const getListItems = async (req: Request, res: Response) => {
       error: 'שגיאה בקבלת פריטי רשימה',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+    return;
   }
 };
 
 // @desc    הוספת פריט לרשימה
 // @route   POST /api/lists/:id/items
 // @access  פרטי (בעלים או הרשאת עריכה)
-export const addListItem = async (req: Request, res: Response) => {
+export const addListItem = async (req: Request, res: Response): Promise<void> => {
   try {
     const listId = req.params.id;
     
@@ -74,10 +78,11 @@ export const addListItem = async (req: Request, res: Response) => {
     const list = await List.findById(listId);
     
     if (!list) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'הרשימה לא נמצאה',
       });
+      return;
     }
 
     // בדוק הרשאות
@@ -90,10 +95,11 @@ export const addListItem = async (req: Request, res: Response) => {
       (shareData.permissions === 'edit' || shareData.permissions === 'admin');
 
     if (!isOwner && !hasEditPermission) {
-      return res.status(403).json({
+      res.status(403).json({
         success: false,
         error: 'אין לך הרשאה להוסיף פריטים לרשימה זו',
       });
+      return;
     }
 
     // הוסף את מזהה הרשימה והמשתמש שהוסיף את הפריט
@@ -114,10 +120,11 @@ export const addListItem = async (req: Request, res: Response) => {
 
     // וודא שיש קטגוריה ראשית
     if (!req.body.category || !req.body.category.main) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'נא לספק קטגוריה ראשית לפריט',
       });
+      return;
     }
 
     // צור את הפריט
@@ -148,6 +155,7 @@ export const addListItem = async (req: Request, res: Response) => {
       success: true,
       data: populatedItem,
     });
+    return;
   } catch (error: any) {
     logger.error(`Add list item error: ${error.message}`);
     res.status(500).json({
@@ -155,13 +163,14 @@ export const addListItem = async (req: Request, res: Response) => {
       error: 'שגיאה בהוספת פריט לרשימה',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+    return;
   }
 };
 
 // @desc    עדכון פריט ברשימה
 // @route   PUT /api/lists/:id/items/:itemId
 // @access  פרטי (בעלים או הרשאת עריכה)
-export const updateListItem = async (req: Request, res: Response) => {
+export const updateListItem = async (req: Request, res: Response): Promise<void> => {
   try {
     const listId = req.params.id;
     const itemId = req.params.itemId;
@@ -170,10 +179,11 @@ export const updateListItem = async (req: Request, res: Response) => {
     const list = await List.findById(listId);
     
     if (!list) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'הרשימה לא נמצאה',
       });
+      return;
     }
 
     // בדוק הרשאות
@@ -186,20 +196,22 @@ export const updateListItem = async (req: Request, res: Response) => {
       (shareData.permissions === 'edit' || shareData.permissions === 'admin');
 
     if (!isOwner && !hasEditPermission) {
-      return res.status(403).json({
+      res.status(403).json({
         success: false,
         error: 'אין לך הרשאה לעדכן פריטים ברשימה זו',
       });
+      return;
     }
 
     // וודא שהפריט קיים ושייך לרשימה המבוקשת
     let item = await ListItem.findOne({ _id: itemId, listId });
     
     if (!item) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'הפריט לא נמצא ברשימה זו',
       });
+      return;
     }
 
     // עדכן את הפריט
@@ -230,6 +242,7 @@ export const updateListItem = async (req: Request, res: Response) => {
       success: true,
       data: item,
     });
+    return;
   } catch (error: any) {
     logger.error(`Update list item error: ${error.message}`);
     res.status(500).json({
@@ -237,13 +250,14 @@ export const updateListItem = async (req: Request, res: Response) => {
       error: 'שגיאה בעדכון פריט ברשימה',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+    return;
   }
 };
 
 // @desc    מחיקת פריט מרשימה
 // @route   DELETE /api/lists/:id/items/:itemId
 // @access  פרטי (בעלים או הרשאת עריכה)
-export const deleteListItem = async (req: Request, res: Response) => {
+export const deleteListItem = async (req: Request, res: Response): Promise<void> => {
   try {
     const listId = req.params.id;
     const itemId = req.params.itemId;
@@ -252,10 +266,11 @@ export const deleteListItem = async (req: Request, res: Response) => {
     const list = await List.findById(listId);
     
     if (!list) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'הרשימה לא נמצאה',
       });
+      return;
     }
 
     // בדוק הרשאות
@@ -268,20 +283,22 @@ export const deleteListItem = async (req: Request, res: Response) => {
       (shareData.permissions === 'edit' || shareData.permissions === 'admin');
 
     if (!isOwner && !hasEditPermission) {
-      return res.status(403).json({
+      res.status(403).json({
         success: false,
         error: 'אין לך הרשאה למחוק פריטים מרשימה זו',
       });
+      return;
     }
 
     // וודא שהפריט קיים ושייך לרשימה המבוקשת
     const item = await ListItem.findOne({ _id: itemId, listId });
     
     if (!item) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'הפריט לא נמצא ברשימה זו',
       });
+      return;
     }
 
     // מחק את הפריט
@@ -295,6 +312,7 @@ export const deleteListItem = async (req: Request, res: Response) => {
       success: true,
       message: 'הפריט נמחק בהצלחה',
     });
+    return;
   } catch (error: any) {
     logger.error(`Delete list item error: ${error.message}`);
     res.status(500).json({
@@ -302,13 +320,14 @@ export const deleteListItem = async (req: Request, res: Response) => {
       error: 'שגיאה במחיקת פריט מהרשימה',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+    return;
   }
 };
 
 // @desc    סימון פריט כנרכש או ביטול סימון
 // @route   PUT /api/lists/:id/items/:itemId/check
 // @access  פרטי (גם הרשאת צפייה מספיקה)
-export const toggleListItemCheck = async (req: Request, res: Response) => {
+export const toggleListItemCheck = async (req: Request, res: Response): Promise<void> => {
   try {
     const listId = req.params.id;
     const itemId = req.params.itemId;
@@ -318,10 +337,11 @@ export const toggleListItemCheck = async (req: Request, res: Response) => {
     const list = await List.findById(listId);
     
     if (!list) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'הרשימה לא נמצאה',
       });
+      return;
     }
 
     // בדוק הרשאות - גם הרשאת צפייה בלבד מספיקה לסימון פריט
@@ -331,20 +351,22 @@ export const toggleListItemCheck = async (req: Request, res: Response) => {
     );
 
     if (!isOwner && !isShared) {
-      return res.status(403).json({
+      res.status(403).json({
         success: false,
         error: 'אין לך הרשאה לעדכן פריטים ברשימה זו',
       });
+      return;
     }
 
     // וודא שהפריט קיים ושייך לרשימה המבוקשת
     let item = await ListItem.findOne({ _id: itemId, listId });
     
     if (!item) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'הפריט לא נמצא ברשימה זו',
       });
+      return;
     }
 
     // עדכן את הסטטוס
@@ -363,6 +385,7 @@ export const toggleListItemCheck = async (req: Request, res: Response) => {
       success: true,
       data: item,
     });
+    return;
   } catch (error: any) {
     logger.error(`Toggle list item check error: ${error.message}`);
     res.status(500).json({
@@ -370,5 +393,6 @@ export const toggleListItemCheck = async (req: Request, res: Response) => {
       error: 'שגיאה בסימון/ביטול סימון פריט ברשימה',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+    return;
   }
 };

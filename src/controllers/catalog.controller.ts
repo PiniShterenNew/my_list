@@ -6,14 +6,11 @@ import logger from '../utils/logger';
 // @desc    חיפוש במוצרי הקטלוג
 // @route   GET /api/catalog
 // @access  פרטי
-export const searchCatalog = async (req: Request, res: Response) => {
+export const searchCatalog = async (req: Request, res: Response): Promise<void> => {
   try {
     const { q: query, category, limit = 10, page = 1 } = req.query;
-    
-    // בנה את תנאי החיפוש
     const searchConditions: any = {};
-    
-    // אם יש חיפוש טקסטואלי
+
     if (query) {
       searchConditions.$or = [
         { name: { $regex: query, $options: 'i' } },
@@ -21,24 +18,20 @@ export const searchCatalog = async (req: Request, res: Response) => {
         { tags: { $regex: query, $options: 'i' } },
       ];
     }
-    
-    // אם יש סינון לפי קטגוריה
+
     if (category) {
       searchConditions['category.main'] = category;
     }
-    
-    // בצע את החיפוש
+
     const skip = (Number(page) - 1) * Number(limit);
-    
     const products = await Product.find(searchConditions)
       .select('name barcode image category defaultUnit price')
       .sort({ popularity: -1 })
       .skip(skip)
       .limit(Number(limit));
-    
-    // קבל את מספר התוצאות הכולל
+
     const total = await Product.countDocuments(searchConditions);
-    
+
     res.status(200).json({
       success: true,
       count: products.length,
@@ -50,6 +43,7 @@ export const searchCatalog = async (req: Request, res: Response) => {
       },
       data: products,
     });
+    return;
   } catch (error: any) {
     logger.error(`Search catalog error: ${error.message}`);
     res.status(500).json({
@@ -57,23 +51,24 @@ export const searchCatalog = async (req: Request, res: Response) => {
       error: 'שגיאה בחיפוש בקטלוג',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+    return;
   }
 };
 
 // @desc    קבלת כל הקטגוריות
 // @route   GET /api/catalog/categories
 // @access  פרטי
-export const getCategories = async (req: Request, res: Response) => {
+export const getCategories = async (req: Request, res: Response): Promise<void> => {
   try {
-    // מצא את כל הקטגוריות הראשיות
     const categories = await Category.find({ parent: null })
       .sort({ customOrder: 1, name: 1 });
-    
+
     res.status(200).json({
       success: true,
       count: categories.length,
       data: categories,
     });
+    return;
   } catch (error: any) {
     logger.error(`Get categories error: ${error.message}`);
     res.status(500).json({
@@ -81,35 +76,35 @@ export const getCategories = async (req: Request, res: Response) => {
       error: 'שגיאה בקבלת קטגוריות',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+    return;
   }
 };
 
 // @desc    קבלת תת-קטגוריות
 // @route   GET /api/catalog/categories/:id
 // @access  פרטי
-export const getSubcategories = async (req: Request, res: Response) => {
+export const getSubcategories = async (req: Request, res: Response): Promise<void> => {
   try {
     const categoryCode = req.params.id;
-    
-    // מצא את הקטגוריה הראשית
     const category = await Category.findOne({ code: categoryCode });
-    
+
     if (!category) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'הקטגוריה לא נמצאה',
       });
+      return;
     }
-    
-    // מצא את כל תתי-הקטגוריות
+
     const subcategories = await Category.find({ parent: categoryCode })
       .sort({ customOrder: 1, name: 1 });
-    
+
     res.status(200).json({
       success: true,
       count: subcategories.length,
       data: subcategories,
     });
+    return;
   } catch (error: any) {
     logger.error(`Get subcategories error: ${error.message}`);
     res.status(500).json({
@@ -117,31 +112,33 @@ export const getSubcategories = async (req: Request, res: Response) => {
       error: 'שגיאה בקבלת תת-קטגוריות',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+    return;
   }
 };
 
 // @desc    קבלת מוצר ספציפי
 // @route   GET /api/catalog/products/:id
 // @access  פרטי
-export const getProduct = async (req: Request, res: Response) => {
+export const getProduct = async (req: Request, res: Response): Promise<void> => {
   try {
     const product = await Product.findById(req.params.id);
-    
+
     if (!product) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'המוצר לא נמצא',
       });
+      return;
     }
-    
-    // עדכן את מדד הפופולריות של המוצר
+
     product.popularity = (product.popularity || 0) + 1;
     await product.save();
-    
+
     res.status(200).json({
       success: true,
       data: product,
     });
+    return;
   } catch (error: any) {
     logger.error(`Get product error: ${error.message}`);
     res.status(500).json({
@@ -149,33 +146,34 @@ export const getProduct = async (req: Request, res: Response) => {
       error: 'שגיאה בקבלת מוצר',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+    return;
   }
 };
 
 // @desc    חיפוש מוצר לפי ברקוד
 // @route   GET /api/catalog/barcode/:code
 // @access  פרטי
-export const getProductByBarcode = async (req: Request, res: Response) => {
+export const getProductByBarcode = async (req: Request, res: Response): Promise<void> => {
   try {
     const barcode = req.params.code;
-    
     const product = await Product.findOne({ barcode });
-    
+
     if (!product) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'לא נמצא מוצר עם הברקוד המבוקש',
       });
+      return;
     }
-    
-    // עדכן את מדד הפופולריות של המוצר
+
     product.popularity = (product.popularity || 0) + 1;
     await product.save();
-    
+
     res.status(200).json({
       success: true,
       data: product,
     });
+    return;
   } catch (error: any) {
     logger.error(`Get product by barcode error: ${error.message}`);
     res.status(500).json({
@@ -183,43 +181,48 @@ export const getProductByBarcode = async (req: Request, res: Response) => {
       error: 'שגיאה בחיפוש מוצר לפי ברקוד',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+    return;
   }
 };
 
 // @desc    עדכון מחיר מוצר
 // @route   PUT /api/catalog/products/:id/price
 // @access  פרטי
-export const updateProductPrice = async (req: Request, res: Response) => {
+export const updateProductPrice = async (req: Request, res: Response): Promise<void> => {
   try {
     const { price, supermarket } = req.body;
-    
+
     if (!price || isNaN(Number(price))) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'נא לספק מחיר תקף',
       });
+      return;
     }
-    
+
     const product = await Product.findById(req.params.id);
-    
+
     if (!product) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'המוצר לא נמצא',
       });
+      return;
     }
-    
-    // הוסף את המחיר להיסטוריה
-    const priceUpdated = product.addPriceToHistory(Number(price), supermarket);
-    
-    if (priceUpdated) {
-      await product.save();
-    }
-    
+
+    product.priceHistory.push({
+      price: Number(price),
+      supermarket,
+      date: new Date(),
+    });
+
+    await product.save();
+
     res.status(200).json({
       success: true,
       data: product,
     });
+    return;
   } catch (error: any) {
     logger.error(`Update product price error: ${error.message}`);
     res.status(500).json({
@@ -227,5 +230,6 @@ export const updateProductPrice = async (req: Request, res: Response) => {
       error: 'שגיאה בעדכון מחיר מוצר',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+    return;
   }
 };

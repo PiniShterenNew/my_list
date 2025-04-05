@@ -2,34 +2,30 @@ import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/user.model';
 import logger from '../utils/logger';
+import mongoose from 'mongoose';
 
 // @desc    הרשמת משתמש חדש
 // @route   POST /api/auth/register
 // @access  ציבורי
-export const register = async (req: Request, res: Response) => {
+export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password, name } = req.body;
-
-    // בדוק אם המשתמש כבר קיים
     const userExists = await User.findOne({ email });
 
     if (userExists) {
-      return res.status(400).json({
-        success: false,
-        error: 'כתובת האימייל כבר קיימת במערכת',
-      });
+      res.status(400).json({ success: false, error: 'כתובת האימייל כבר קיימת במערכת' });
+      return;
     }
 
-    // צור משתמש חדש
     const user = await User.create({
       email,
-      passwordHash: password, // יוצפן על ידי middleware לפני השמירה
+      passwordHash: password,
       name,
       createdAt: new Date(),
     });
 
-    // צור וחזור את הטוקנים
     sendTokenResponse(user, 201, res);
+    return;
   } catch (error: any) {
     logger.error(`Registration error: ${error.message}`);
     res.status(500).json({
@@ -37,50 +33,38 @@ export const register = async (req: Request, res: Response) => {
       error: 'שגיאה בהרשמה',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+    return;
   }
 };
 
 // @desc    כניסת משתמש
 // @route   POST /api/auth/login
 // @access  ציבורי
-export const login = async (req: Request, res: Response) => {
+export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
-
-    // וידוא שהמייל והסיסמה סופקו
     if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        error: 'נא לספק כתובת אימייל וסיסמה',
-      });
+      res.status(400).json({ success: false, error: 'נא לספק כתובת אימייל וסיסמה' });
+      return;
     }
 
-    // בדוק אם המשתמש קיים
     const user = await User.findOne({ email }).select('+passwordHash');
-
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        error: 'פרטי התחברות שגויים',
-      });
+      res.status(401).json({ success: false, error: 'פרטי התחברות שגויים' });
+      return;
     }
 
-    // בדוק אם הסיסמה תואמת
     const isMatch = await user.matchPassword(password);
-
     if (!isMatch) {
-      return res.status(401).json({
-        success: false,
-        error: 'פרטי התחברות שגויים',
-      });
+      res.status(401).json({ success: false, error: 'פרטי התחברות שגויים' });
+      return;
     }
 
-    // עדכן את תאריך ההתחברות האחרון
     user.lastLogin = new Date();
     await user.save();
 
-    // צור וחזור את הטוקנים
     sendTokenResponse(user, 200, res);
+    return;
   } catch (error: any) {
     logger.error(`Login error: ${error.message}`);
     res.status(500).json({
@@ -88,63 +72,37 @@ export const login = async (req: Request, res: Response) => {
       error: 'שגיאה בהתחברות',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+    return;
   }
 };
 
-// @desc    חידוש access token באמצעות refresh token
+// @desc    חידוש access token
 // @route   POST /api/auth/refresh
-// @access  ציבורי (עם refresh token)
-export const refreshToken = async (req: Request, res: Response) => {
+// @access  ציבורי
+export const refreshToken = async (req: Request, res: Response): Promise<void> => {
   try {
     const { refreshToken } = req.body;
-
     if (!refreshToken) {
-      return res.status(400).json({
-        success: false,
-        error: 'חסר refresh token',
-      });
+      res.status(400).json({ success: false, error: 'חסר refresh token' });
+      return;
     }
 
-    // וודא שה-refresh token תקף
-    const decoded = jwt.verify(
-      refreshToken,
-      process.env.REFRESH_TOKEN_SECRET as string
-    ) as jwt.JwtPayload;
-
+    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET as string) as jwt.JwtPayload;
     if (!decoded || !decoded.id) {
-      return res.status(401).json({
-        success: false,
-        error: 'Refresh token לא תקף',
-      });
+      res.status(401).json({ success: false, error: 'Refresh token לא תקף' });
+      return;
     }
 
-    // מצא את המשתמש
     const user = await User.findById(decoded.id);
-
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        error: 'משתמש לא נמצא',
-      });
+    if (!user || !user.refreshTokens.includes(refreshToken)) {
+      res.status(401).json({ success: false, error: 'Refresh token לא תקף' });
+      return;
     }
 
-    // וודא שה-refresh token נמצא ברשימת הטוקנים של המשתמש
-    if (!user.refreshTokens.includes(refreshToken)) {
-      return res.status(401).json({
-        success: false,
-        error: 'Refresh token לא תקף',
-      });
-    }
+    const accessToken = generateToken((user._id as mongoose.Types.ObjectId).toString(), process.env.JWT_SECRET as string, (process.env.JWT_EXPIRE || '15m') as jwt.SignOptions['expiresIn']);
 
-    // צור access token חדש
-    const accessToken = generateToken(user._id.toString(), 
-      process.env.JWT_SECRET as string, 
-      process.env.JWT_EXPIRE || '15m');
-
-    res.status(200).json({
-      success: true,
-      accessToken,
-    });
+    res.status(200).json({ success: true, accessToken });
+    return;
   } catch (error: any) {
     logger.error(`Refresh token error: ${error.message}`);
     res.status(401).json({
@@ -152,38 +110,29 @@ export const refreshToken = async (req: Request, res: Response) => {
       error: 'Refresh token לא תקף או פג תוקף',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+    return;
   }
 };
 
-// @desc    ניתוק משתמש וביטול refresh token
+// @desc    ניתוק משתמש
 // @route   POST /api/auth/logout
 // @access  פרטי
-export const logout = async (req: Request, res: Response) => {
+export const logout = async (req: Request, res: Response): Promise<void> => {
   try {
     const { refreshToken } = req.body;
-
     if (!refreshToken) {
-      return res.status(400).json({
-        success: false,
-        error: 'חסר refresh token',
-      });
+      res.status(400).json({ success: false, error: 'חסר refresh token' });
+      return;
     }
 
-    // מצא את המשתמש מבקשת האימות
     const user = req.user;
-
-    // הסר את ה-refresh token מהמשתמש
     if (user) {
-      user.refreshTokens = user.refreshTokens.filter(
-        (token: string) => token !== refreshToken
-      );
+      user.refreshTokens = user.refreshTokens.filter((token: string) => token !== refreshToken);
       await user.save();
     }
 
-    res.status(200).json({
-      success: true,
-      message: 'נותקת בהצלחה',
-    });
+    res.status(200).json({ success: true, message: 'נותקת בהצלחה' });
+    return;
   } catch (error: any) {
     logger.error(`Logout error: ${error.message}`);
     res.status(500).json({
@@ -191,21 +140,18 @@ export const logout = async (req: Request, res: Response) => {
       error: 'שגיאה בניתוק',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+    return;
   }
 };
 
-// @desc    קבלת פרטי המשתמש המחובר כעת
+// @desc    קבלת פרטי המשתמש
 // @route   GET /api/auth/me
 // @access  פרטי
-export const getMe = async (req: Request, res: Response) => {
+export const getMe = async (req: Request, res: Response): Promise<void> => {
   try {
-    // המשתמש כבר נטען ב-middleware
     const user = req.user;
-
-    res.status(200).json({
-      success: true,
-      data: user,
-    });
+    res.status(200).json({ success: true, data: user });
+    return;
   } catch (error: any) {
     logger.error(`Get user error: ${error.message}`);
     res.status(500).json({
@@ -213,31 +159,21 @@ export const getMe = async (req: Request, res: Response) => {
       error: 'שגיאה בקבלת נתוני משתמש',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+    return;
   }
 };
 
-// פונקציה ליצירת JWT
-const generateToken = (id: string, secret: string, expiresIn: string): string => {
-  return jwt.sign(
-    { id },
-    secret,
-    { expiresIn }
-  );
+const generateToken = (id: string, secret: string, expiresIn: jwt.SignOptions['expiresIn']): string => {
+  return jwt.sign({ id }, secret, { expiresIn });
 };
 
-// פונקציית עזר לשליחת תגובת טוקנים
-const sendTokenResponse = (user: any, statusCode: number, res: Response) => {
-  // צור JWT
+const sendTokenResponse = (user: any, statusCode: number, res: Response): void => {
   const accessToken = generateToken(
     user._id.toString(),
     process.env.JWT_SECRET as string,
-    process.env.JWT_EXPIRE || '15m'
+    (process.env.JWT_EXPIRE || '15m') as jwt.SignOptions['expiresIn']
   );
-  
-  // צור refresh token
   const refreshToken = user.getRefreshToken();
-
-  // הכן את אובייקט המשתמש להחזרה (ללא שדות רגישים)
   const userData = {
     id: user._id,
     name: user.name,

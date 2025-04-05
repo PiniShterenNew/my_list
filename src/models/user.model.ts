@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import type * as ms from 'ms';
 
 interface IPreferences {
   language: string;
@@ -33,7 +34,7 @@ export interface IUser extends Document {
   getRefreshToken(): string;
 }
 
-const UserSchema: Schema = new Schema({
+const UserSchema = new Schema<IUser>({
   email: {
     type: String,
     required: [true, 'נא להזין כתובת אימייל'],
@@ -100,7 +101,10 @@ const UserSchema: Schema = new Schema({
     ref: 'User',
   }],
   deviceTokens: [String],
-  refreshTokens: [String],
+  refreshTokens: {
+    type: [String],
+    default: [],
+  },
 });
 
 // Hook לפני שמירה - הצפנת סיסמה
@@ -123,7 +127,7 @@ UserSchema.methods.matchPassword = async function (enteredPassword: string): Pro
 UserSchema.methods.getSignedJwtToken = function (): string {
   const secret = process.env.JWT_SECRET as string;
   const options: jwt.SignOptions = {
-    expiresIn: process.env.JWT_EXPIRE || '15m'
+    expiresIn: process.env.JWT_EXPIRE as ms.StringValue || '15m',
   };
   
   return jwt.sign(
@@ -134,12 +138,12 @@ UserSchema.methods.getSignedJwtToken = function (): string {
 };
 
 // מתודה ליצירת Refresh Token
-UserSchema.methods.getRefreshToken = function (): string {
+UserSchema.methods.getRefreshToken = async function (): Promise<string> {
   const secret = process.env.REFRESH_TOKEN_SECRET as string;
   const options: jwt.SignOptions = {
-    expiresIn: process.env.REFRESH_TOKEN_EXPIRE || '7d'
+    expiresIn: (process.env.REFRESH_TOKEN_EXPIRE ?? '7d') as ms.StringValue | number,
   };
-  
+
   const refreshToken = jwt.sign(
     { id: this._id },
     secret,
@@ -148,14 +152,13 @@ UserSchema.methods.getRefreshToken = function (): string {
 
   // שמור את הrefresh token במסד הנתונים
   this.refreshTokens = this.refreshTokens || [];
-  
-  // הגבל את מספר הrefresh tokens ל-5
+
   if (this.refreshTokens.length >= 5) {
     this.refreshTokens.shift(); // הסר את הטוקן הישן ביותר
   }
-  
+
   this.refreshTokens.push(refreshToken);
-  this.save();
+  await this.save(); // ← הוסף await כאן
 
   return refreshToken;
 };

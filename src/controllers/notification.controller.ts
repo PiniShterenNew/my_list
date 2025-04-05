@@ -5,38 +5,32 @@ import logger from '../utils/logger';
 // @desc    קבלת התראות למשתמש
 // @route   GET /api/notifications
 // @access  פרטי
-export const getUserNotifications = async (req: Request, res: Response) => {
+export const getUserNotifications = async (req: Request, res: Response): Promise<void> => {
   try {
     const { limit = 20, page = 1, unreadOnly = false } = req.query;
-    
-    // בנה את תנאי החיפוש
+
     const searchConditions: any = {
       userId: req.user._id,
     };
-    
-    // אם צריך רק הודעות שלא נקראו
+
     if (unreadOnly === 'true') {
       searchConditions.read = false;
     }
-    
-    // חשב את הדילוג
+
     const skip = (Number(page) - 1) * Number(limit);
-    
-    // קבל את ההתראות
+
     const notifications = await Notification.find(searchConditions)
       .sort({ timestamp: -1 })
       .skip(skip)
       .limit(Number(limit));
-    
-    // קבל את מספר ההתראות הכולל
+
     const total = await Notification.countDocuments(searchConditions);
-    
-    // קבל את מספר ההתראות שלא נקראו
+
     const unreadCount = await Notification.countDocuments({
       userId: req.user._id,
       read: false,
     });
-    
+
     res.status(200).json({
       success: true,
       count: notifications.length,
@@ -62,32 +56,31 @@ export const getUserNotifications = async (req: Request, res: Response) => {
 // @desc    סימון התראה כנקראה
 // @route   PUT /api/notifications/:id/read
 // @access  פרטי
-export const markNotificationRead = async (req: Request, res: Response) => {
+export const markNotificationRead = async (req: Request, res: Response): Promise<void> => {
   try {
     const notificationId = req.params.id;
-    
-    // מצא את ההתראה
+
     const notification = await Notification.findById(notificationId);
-    
+
     if (!notification) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'ההתראה לא נמצאה',
       });
+      return;
     }
-    
-    // וודא שההתראה שייכת למשתמש הנוכחי
+
     if (notification.userId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({
+      res.status(403).json({
         success: false,
         error: 'אין לך הרשאה לעדכן התראה זו',
       });
+      return;
     }
-    
-    // עדכן את סטטוס הקריאה
+
     notification.read = true;
     await notification.save();
-    
+
     res.status(200).json({
       success: true,
       data: notification,
@@ -105,14 +98,13 @@ export const markNotificationRead = async (req: Request, res: Response) => {
 // @desc    סימון כל ההתראות כנקראו
 // @route   PUT /api/notifications/read-all
 // @access  פרטי
-export const markAllNotificationsRead = async (req: Request, res: Response) => {
+export const markAllNotificationsRead = async (req: Request, res: Response): Promise<void> => {
   try {
-    // עדכן את כל ההתראות של המשתמש
     const result = await Notification.updateMany(
       { userId: req.user._id, read: false },
       { read: true }
     );
-    
+
     res.status(200).json({
       success: true,
       message: `${result.modifiedCount} התראות סומנו כנקראו`,
@@ -130,31 +122,30 @@ export const markAllNotificationsRead = async (req: Request, res: Response) => {
 // @desc    מחיקת התראה
 // @route   DELETE /api/notifications/:id
 // @access  פרטי
-export const deleteNotification = async (req: Request, res: Response) => {
+export const deleteNotification = async (req: Request, res: Response): Promise<void> => {
   try {
     const notificationId = req.params.id;
-    
-    // מצא את ההתראה
+
     const notification = await Notification.findById(notificationId);
-    
+
     if (!notification) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'ההתראה לא נמצאה',
       });
+      return;
     }
-    
-    // וודא שההתראה שייכת למשתמש הנוכחי
+
     if (notification.userId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({
+      res.status(403).json({
         success: false,
         error: 'אין לך הרשאה למחוק התראה זו',
       });
+      return;
     }
-    
-    // מחק את ההתראה
+
     await notification.deleteOne();
-    
+
     res.status(200).json({
       success: true,
       message: 'ההתראה נמחקה בהצלחה',

@@ -1,16 +1,15 @@
-import express from 'express';
-import dotenv from 'dotenv';
-import cors from 'cors';
-import helmet from 'helmet';
+const express = require('express');
+const dotenv = require('dotenv');
+const cors = require('cors');
+const helmet = require('helmet');
+import { Request, Response, NextFunction } from 'express';
 
-import morganMiddleware from './middlewares/morgan.middleware';
-
-// Routes import
-import authRoutes from './routes/auth.routes';
-import userRoutes from './routes/user.routes';
-import listRoutes from './routes/list.routes';
-import catalogRoutes from './routes/catalog.routes';
-import notificationRoutes from './routes/notification.routes';
+const morganMiddleware = require('./middlewares/morgan.middleware');
+const authRoutes = require('./routes/auth.routes');
+const userRoutes = require('./routes/user.routes');
+const listRoutes = require('./routes/list.routes');
+const catalogRoutes = require('./routes/catalog.routes');
+const notificationRoutes = require('./routes/notification.routes');
 
 // Load environment variables - אם כבר נטענו, לא יטענו שוב
 if (!process.env.NODE_ENV) {
@@ -24,17 +23,17 @@ const app = express();
 app.use(helmet()); // Security headers
 app.use(cors()); // Enable CORS
 app.use(express.json()); // Parse JSON bodies
-app.use(morganMiddleware); // HTTP request logger
+app.use(morganMiddleware.default); // HTTP request logger
 
 // Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/lists', listRoutes);
-app.use('/api/catalog', catalogRoutes);
-app.use('/api/notifications', notificationRoutes);
+app.use('/api/auth', authRoutes.default || authRoutes);
+app.use('/api/users', userRoutes.default || userRoutes);
+app.use('/api/lists', listRoutes.default || listRoutes);
+app.use('/api/catalog', catalogRoutes.default || catalogRoutes);
+app.use('/api/notifications', notificationRoutes.default || notificationRoutes);
 
 // Basic route for testing
-app.get('/', (req, res) => {
+app.get('/', (req: Request, res: Response) => {
   res.json({
     success: true,
     message: 'שרת רשימות קניות פועל! 🛒',
@@ -44,7 +43,7 @@ app.get('/', (req, res) => {
 });
 
 // Handle errors
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   res.status(500).json({
     success: false,
     error: 'שגיאת שרת',

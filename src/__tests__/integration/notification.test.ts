@@ -44,7 +44,7 @@ describe('Notification Controller Tests', () => {
     it('should return user\'s notifications', async () => {
       // צור התראות
       await Notification.create({
-        userId,
+        userId: userId,
         type: 'system',
         message: 'התראה 1',
         timestamp: new Date(),
@@ -52,7 +52,7 @@ describe('Notification Controller Tests', () => {
       });
       
       await Notification.create({
-        userId,
+        userId: userId,
         type: 'share',
         message: 'התראה 2',
         timestamp: new Date(),
@@ -88,7 +88,7 @@ describe('Notification Controller Tests', () => {
     it('should filter unread notifications', async () => {
       // צור התראות
       await Notification.create({
-        userId,
+        userId: userId,
         type: 'system',
         message: 'התראה שלא נקראה',
         timestamp: new Date(),
@@ -96,7 +96,7 @@ describe('Notification Controller Tests', () => {
       });
       
       await Notification.create({
-        userId,
+        userId: userId,
         type: 'share',
         message: 'התראה שנקראה',
         timestamp: new Date(),
@@ -117,10 +117,17 @@ describe('Notification Controller Tests', () => {
     
     it('should support pagination', async () => {
       // צור הרבה התראות
-      const notifications = [];
+      const notifications: Array<{
+        userId: mongoose.Types.ObjectId;
+        type: 'system' | 'share' | 'reminder';
+        message: string;
+        timestamp: Date;
+        read: boolean;
+      }> = [];
+      
       for (let i = 0; i < 15; i++) {
         notifications.push({
-          userId,
+          userId: userId,
           type: 'system',
           message: `התראה ${i}`,
           timestamp: new Date(Date.now() - i * 60000), // הפרש של דקה בין ההתראות
@@ -175,7 +182,7 @@ describe('Notification Controller Tests', () => {
         read: false
       });
       
-      notificationId = notification._id;
+      notificationId = notification._id as mongoose.Types.ObjectId;
     });
     
     it('should mark a notification as read', async () => {
@@ -314,7 +321,7 @@ describe('Notification Controller Tests', () => {
         read: false
       });
       
-      notificationId = notification._id;
+      notificationId = notification._id as mongoose.Types.ObjectId;
     });
     
     it('should delete a notification', async () => {

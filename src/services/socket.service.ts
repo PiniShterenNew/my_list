@@ -30,7 +30,7 @@ class SocketService {
         }
         
         // שמור את מזהה המשתמש בסוקט
-        socket.data.userId = user._id.toString();
+        socket.data.userId = (user as { _id: { toString: () => string } })._id.toString();
         next();
       } catch (error: any) {
         logger.error(`Socket authentication error: ${error.message}`);

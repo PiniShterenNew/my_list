@@ -8,7 +8,7 @@ import logger from '../utils/logger';
 // @desc    קבלת כל הרשימות של המשתמש
 // @route   GET /api/lists
 // @access  פרטי
-export const getLists = async (req: Request, res: Response) => {
+export const getLists = async (req: Request, res: Response): Promise<void> => {
   try {
     // מצא את כל הרשימות ששייכות למשתמש
     const lists = await List.find({ owner: req.user._id })
@@ -23,6 +23,7 @@ export const getLists = async (req: Request, res: Response) => {
       count: lists.length,
       data: lists,
     });
+    return;
   } catch (error: any) {
     logger.error(`Get lists error: ${error.message}`);
     res.status(500).json({
@@ -30,13 +31,14 @@ export const getLists = async (req: Request, res: Response) => {
       error: 'שגיאה בקבלת רשימות',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+    return;
   }
 };
 
 // @desc    יצירת רשימה חדשה
 // @route   POST /api/lists
 // @access  פרטי
-export const createList = async (req: Request, res: Response) => {
+export const createList = async (req: Request, res: Response): Promise<void> => {
   try {
     // הוסף את המשתמש כבעלים
     req.body.owner = req.user._id;
@@ -58,6 +60,7 @@ export const createList = async (req: Request, res: Response) => {
       success: true,
       data: list,
     });
+    return;
   } catch (error: any) {
     logger.error(`Create list error: ${error.message}`);
     res.status(500).json({
@@ -65,13 +68,14 @@ export const createList = async (req: Request, res: Response) => {
       error: 'שגיאה ביצירת רשימה',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+    return;
   }
 };
 
 // @desc    קבלת רשימה ספציפית
 // @route   GET /api/lists/:id
 // @access  פרטי
-export const getList = async (req: Request, res: Response) => {
+export const getList = async (req: Request, res: Response): Promise<void> => {
   try {
     const list = await List.findById(req.params.id)
       .populate({
@@ -84,10 +88,11 @@ export const getList = async (req: Request, res: Response) => {
       });
 
     if (!list) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'הרשימה לא נמצאה',
       });
+      return;
     }
 
     // בדוק אם המשתמש הוא הבעלים או שהרשימה משותפת איתו
@@ -97,16 +102,18 @@ export const getList = async (req: Request, res: Response) => {
     );
 
     if (!isOwner && !isShared) {
-      return res.status(403).json({
+      res.status(403).json({
         success: false,
         error: 'אין לך הרשאה לגשת לרשימה זו',
       });
+      return;
     }
 
     res.status(200).json({
       success: true,
       data: list,
     });
+    return;
   } catch (error: any) {
     logger.error(`Get list error: ${error.message}`);
     res.status(500).json({
@@ -114,21 +121,23 @@ export const getList = async (req: Request, res: Response) => {
       error: 'שגיאה בקבלת רשימה',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+    return;
   }
 };
 
 // @desc    עדכון רשימה
 // @route   PUT /api/lists/:id
 // @access  פרטי (בעלים או הרשאת עריכה)
-export const updateList = async (req: Request, res: Response) => {
+export const updateList = async (req: Request, res: Response): Promise<void> => {
   try {
     let list = await List.findById(req.params.id);
 
     if (!list) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'הרשימה לא נמצאה',
       });
+      return;
     }
 
     // בדוק הרשאות
@@ -141,10 +150,11 @@ export const updateList = async (req: Request, res: Response) => {
       (shareData.permissions === 'edit' || shareData.permissions === 'admin');
 
     if (!isOwner && !hasEditPermission) {
-      return res.status(403).json({
+      res.status(403).json({
         success: false,
         error: 'אין לך הרשאה לעדכן רשימה זו',
       });
+      return;
     }
 
     // עדכן את הרשימה
@@ -154,19 +164,22 @@ export const updateList = async (req: Request, res: Response) => {
     });
 
     // הוסף פעולה לדף ההיסטוריה
-    list.history.push({
+    list?.history.push({
       action: 'update',
       userId: req.user._id,
       timestamp: new Date(),
       details: req.body
     });
     
-    await list.save();
+if (list) {
+  await list.save();
+}
 
     res.status(200).json({
       success: true,
       data: list,
     });
+    return;
   } catch (error: any) {
     logger.error(`Update list error: ${error.message}`);
     res.status(500).json({
@@ -174,29 +187,32 @@ export const updateList = async (req: Request, res: Response) => {
       error: 'שגיאה בעדכון רשימה',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+    return;
   }
 };
 
 // @desc    מחיקת רשימה
 // @route   DELETE /api/lists/:id
 // @access  פרטי (רק בעלים)
-export const deleteList = async (req: Request, res: Response) => {
+export const deleteList = async (req: Request, res: Response): Promise<void> => {
   try {
     const list = await List.findById(req.params.id);
 
     if (!list) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'הרשימה לא נמצאה',
       });
+      return;
     }
 
     // וודא שהמשתמש הוא הבעלים של הרשימה
     if (list.owner.toString() !== req.user._id.toString()) {
-      return res.status(403).json({
+      res.status(403).json({
         success: false,
         error: 'אין לך הרשאה למחוק רשימה זו',
       });
+      return;
     }
 
     // מחק את כל הפריטים ברשימה
@@ -209,6 +225,7 @@ export const deleteList = async (req: Request, res: Response) => {
       success: true,
       message: 'הרשימה נמחקה בהצלחה',
     });
+    return;
   } catch (error: any) {
     logger.error(`Delete list error: ${error.message}`);
     res.status(500).json({
@@ -216,30 +233,33 @@ export const deleteList = async (req: Request, res: Response) => {
       error: 'שגיאה במחיקת רשימה',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+    return;
   }
 };
 
 // @desc    עדכון סטטוס רשימה
 // @route   PUT /api/lists/:id/status
 // @access  פרטי (בעלים או הרשאת עריכה)
-export const updateListStatus = async (req: Request, res: Response) => {
+export const updateListStatus = async (req: Request, res: Response): Promise<void> => {
   try {
     const { status } = req.body;
 
     if (!status || !['active', 'shopping', 'completed'].includes(status)) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'נא לספק סטטוס תקף',
       });
+      return;
     }
 
     let list = await List.findById(req.params.id);
 
     if (!list) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'הרשימה לא נמצאה',
       });
+      return;
     }
 
     // בדוק הרשאות
@@ -252,10 +272,11 @@ export const updateListStatus = async (req: Request, res: Response) => {
       (shareData.permissions === 'edit' || shareData.permissions === 'admin');
 
     if (!isOwner && !hasEditPermission) {
-      return res.status(403).json({
+      res.status(403).json({
         success: false,
         error: 'אין לך הרשאה לעדכן סטטוס רשימה זו',
       });
+      return;
     }
 
     // עדכן את הסטטוס
@@ -275,6 +296,7 @@ export const updateListStatus = async (req: Request, res: Response) => {
       success: true,
       data: list,
     });
+    return;
   } catch (error: any) {
     logger.error(`Update list status error: ${error.message}`);
     res.status(500).json({
@@ -282,13 +304,14 @@ export const updateListStatus = async (req: Request, res: Response) => {
       error: 'שגיאה בעדכון סטטוס רשימה',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+    return;
   }
 };
 
 // @desc    קבלת רשימות משותפות עם המשתמש
 // @route   GET /api/lists/shared
 // @access  פרטי
-export const getSharedLists = async (req: Request, res: Response) => {
+export const getSharedLists = async (req: Request, res: Response): Promise<void> => {
   try {
     // מצא את כל הרשימות שמשותפות עם המשתמש
     const lists = await List.find({ 
@@ -305,6 +328,7 @@ export const getSharedLists = async (req: Request, res: Response) => {
       count: lists.length,
       data: lists,
     });
+    return;
   } catch (error: any) {
     logger.error(`Get shared lists error: ${error.message}`);
     res.status(500).json({
@@ -312,30 +336,33 @@ export const getSharedLists = async (req: Request, res: Response) => {
       error: 'שגיאה בקבלת רשימות משותפות',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+    return;
   }
 };
 
 // @desc    שיתוף רשימה עם משתמשים
 // @route   POST /api/lists/:id/share
 // @access  פרטי (בעלים או הרשאת admin)
-export const shareList = async (req: Request, res: Response) => {
+export const shareList = async (req: Request, res: Response): Promise<void> => {
   try {
     const { users } = req.body;
 
     if (!users || !Array.isArray(users) || users.length === 0) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'נא לספק רשימת משתמשים לשיתוף',
       });
+      return;
     }
 
     const list = await List.findById(req.params.id);
 
     if (!list) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'הרשימה לא נמצאה',
       });
+      return;
     }
 
     // בדוק הרשאות
@@ -345,10 +372,11 @@ export const shareList = async (req: Request, res: Response) => {
     );
 
     if (!isOwner && !shareData) {
-      return res.status(403).json({
+      res.status(403).json({
         success: false,
         error: 'אין לך הרשאה לשתף רשימה זו',
       });
+      return;
     }
 
     // עדכן את רשימת המשתמשים המשותפים
@@ -400,6 +428,7 @@ export const shareList = async (req: Request, res: Response) => {
       success: true,
       data: list,
     });
+    return;
   } catch (error: any) {
     logger.error(`Share list error: ${error.message}`);
     res.status(500).json({
@@ -407,22 +436,24 @@ export const shareList = async (req: Request, res: Response) => {
       error: 'שגיאה בשיתוף רשימה',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+    return;
   }
 };
 
 // @desc    ביטול שיתוף רשימה עם משתמש
 // @route   DELETE /api/lists/:id/share/:userId
 // @access  פרטי (בעלים או הרשאת admin)
-export const removeListShare = async (req: Request, res: Response) => {
+export const removeListShare = async (req: Request, res: Response): Promise<void> => {
   try {
     const list = await List.findById(req.params.id);
     const userIdToRemove = req.params.userId;
 
     if (!list) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'הרשימה לא נמצאה',
       });
+      return;
     }
 
     // בדוק הרשאות
@@ -433,10 +464,11 @@ export const removeListShare = async (req: Request, res: Response) => {
     );
 
     if (!isOwner && !isAdmin && !isSelfRemoval) {
-      return res.status(403).json({
+      res.status(403).json({
         success: false,
         error: 'אין לך הרשאה להסיר משתמש מרשימה זו',
       });
+      return;
     }
 
     // הסר את המשתמש מהרשימה
@@ -458,6 +490,7 @@ export const removeListShare = async (req: Request, res: Response) => {
       success: true,
       message: 'המשתמש הוסר בהצלחה מהרשימה המשותפת',
     });
+    return;
   } catch (error: any) {
     logger.error(`Remove list share error: ${error.message}`);
     res.status(500).json({
@@ -465,21 +498,23 @@ export const removeListShare = async (req: Request, res: Response) => {
       error: 'שגיאה בהסרת שיתוף רשימה',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+    return;
   }
 };
 
 // @desc    סיום תהליך קנייה
 // @route   POST /api/lists/:id/complete
 // @access  פרטי (בעלים או הרשאת עריכה)
-export const completeShoppingList = async (req: Request, res: Response) => {
+export const completeShoppingList = async (req: Request, res: Response): Promise<void> => {
   try {
     const list = await List.findById(req.params.id);
 
     if (!list) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'הרשימה לא נמצאה',
       });
+      return;
     }
 
     // בדוק הרשאות
@@ -492,10 +527,11 @@ export const completeShoppingList = async (req: Request, res: Response) => {
       (shareData.permissions === 'edit' || shareData.permissions === 'admin');
 
     if (!isOwner && !hasEditPermission) {
-      return res.status(403).json({
+      res.status(403).json({
         success: false,
         error: 'אין לך הרשאה לסיים את תהליך הקנייה ברשימה זו',
       });
+      return;
     }
 
     // עדכן את סטטוס הרשימה
@@ -536,6 +572,7 @@ export const completeShoppingList = async (req: Request, res: Response) => {
         type: list.type,
       },
     });
+    return;
   } catch (error: any) {
     logger.error(`Complete shopping list error: ${error.message}`);
     res.status(500).json({
@@ -543,5 +580,6 @@ export const completeShoppingList = async (req: Request, res: Response) => {
       error: 'שגיאה בסיום תהליך הקנייה',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+    return;
   }
 };

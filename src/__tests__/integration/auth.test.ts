@@ -161,7 +161,7 @@ describe('Auth Controller Tests', () => {
         name: 'משתמש בדיקה'
       });
       
-      userId = user._id.toString();
+      userId = (user._id as any).toString();
       
       // צור refresh token
       refreshToken = user.getRefreshToken();

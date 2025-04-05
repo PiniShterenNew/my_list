@@ -48,7 +48,14 @@ export const createTestUser = async (
   });
   
   // החזר את המשתמש והסיסמה המקורית
-  return { user: user.toObject({ getters: true }), password };
+  const userObj = user.toObject({ getters: true });
+  return { 
+    user: {
+      ...userObj,
+      _id: (user._id as mongoose.Types.ObjectId).toString()// וודא ש-_id הוא מחרוזת
+    }, 
+    password 
+  };
 };
 
 /**
@@ -78,7 +85,11 @@ export const createTestList = async (
     ...overrides
   });
   
-  return list.toObject({ getters: true });
+  const listObj = list.toObject({ getters: true });
+  return {
+    ...listObj,
+    _id: (list._id as mongoose.Types.ObjectId).toString()
+  };
 };
 
 /**
@@ -104,7 +115,11 @@ export const createTestListItem = async (
     ...overrides
   });
   
-  return item.toObject({ getters: true });
+  const itemObj = item.toObject({ getters: true });
+  return {
+    ...itemObj,
+    _id: (item._id as mongoose.Types.ObjectId).toString()
+  };
 };
 
 /**
@@ -130,7 +145,11 @@ export const createTestProduct = async (
     ...overrides
   });
   
-  return product.toObject({ getters: true });
+  const productObj = product.toObject({ getters: true });
+  return {
+    ...productObj,
+    _id: (product._id as mongoose.Types.ObjectId).toString()
+  };
 };
 
 /**

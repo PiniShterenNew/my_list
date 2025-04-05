@@ -135,9 +135,9 @@ describe('User Model Tests', () => {
     });
     
     // צור 6 טוקנים
-    const tokens = [];
+    const tokens:string[] = [];
     for (let i = 0; i < 6; i++) {
-      tokens.push(user.getRefreshToken());
+      tokens.push(await user.getRefreshToken());
     }
     
     // טען את המשתמש מחדש

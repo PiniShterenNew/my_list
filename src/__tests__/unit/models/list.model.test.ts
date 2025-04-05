@@ -1,5 +1,5 @@
 import List from '../../../models/list.model';
-import User from '../../../models/user.model';
+import User, { IUser } from '../../../models/user.model';
 import { clearDatabase } from '../../helpers/db.helper';
 import mongoose from 'mongoose';
 
@@ -16,7 +16,7 @@ describe('List Model Tests', () => {
       email: 'test@example.com',
       passwordHash: 'password123',
       name: 'משתמש בדיקה'
-    });
+    }) as mongoose.Document<unknown, {}, IUser> & IUser & { _id: mongoose.Types.ObjectId };
     
     userId = user._id.toString();
   });
