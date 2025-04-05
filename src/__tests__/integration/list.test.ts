@@ -1,6 +1,7 @@
 import request from 'supertest';
 import { app } from '../../app';
 import User from '../../models/user.model';
+import { generateToken, getAuthHeaders } from '../helpers/auth.helper';
 import List from '../../models/list.model';
 import { clearDatabase, createTestUser, createTestList } from '../helpers/db.helper';
 import mongoose from 'mongoose';
@@ -25,14 +26,14 @@ describe('List Controller Tests', () => {
         password: password
       });
     
-    token = loginResponse.body.accessToken;
+    token = generateToken(userId);
   });
   
   describe('GET /api/lists', () => {
     it('should return empty array when no lists exist', async () => {
       const response = await request(app)
         .get('/api/lists')
-        .set('Authorization', `Bearer ${token}`);
+        .set(getAuthHeaders(token));
       
       // בדוק תגובה מוצלחת
       expect(response.status).toBe(200);

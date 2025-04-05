@@ -4,6 +4,12 @@ import logger from '../utils/logger';
 
 export const getUserProfile = async (req: Request, res: Response): Promise<void> => {
   try {
+    // בדיקה שהמשתמש קיים
+    if (!req.user || !req.user._id) {
+      res.status(401).json({ success: false, error: 'לא מורשה' });
+      return;
+    }
+
     const user = await User.findById(req.user._id)
       .select('-passwordHash -refreshTokens')
       .populate({ path: 'favoriteItems', select: 'name image category defaultUnit' })
@@ -23,6 +29,12 @@ export const getUserProfile = async (req: Request, res: Response): Promise<void>
 
 export const updateUserProfile = async (req: Request, res: Response): Promise<void> => {
   try {
+    // בדיקה שהמשתמש קיים
+    if (!req.user || !req.user._id) {
+      res.status(401).json({ success: false, error: 'לא מורשה' });
+      return;
+    }
+
     const { name, avatar } = req.body;
     const updateData: any = {};
     if (name) updateData.name = name;
@@ -44,6 +56,12 @@ export const updateUserProfile = async (req: Request, res: Response): Promise<vo
 
 export const updateUserPreferences = async (req: Request, res: Response): Promise<void> => {
   try {
+    // בדיקה שהמשתמש קיים
+    if (!req.user || !req.user._id) {
+      res.status(401).json({ success: false, error: 'לא מורשה' });
+      return;
+    }
+
     const { preferences } = req.body;
 
     if (!preferences) {
@@ -67,6 +85,12 @@ export const updateUserPreferences = async (req: Request, res: Response): Promis
 
 export const searchUsers = async (req: Request, res: Response): Promise<void> => {
   try {
+    // בדיקה שהמשתמש קיים
+    if (!req.user || !req.user._id) {
+      res.status(401).json({ success: false, error: 'לא מורשה' });
+      return;
+    }
+
     const query = req.query.q as string;
 
     if (!query) {
@@ -91,6 +115,12 @@ export const searchUsers = async (req: Request, res: Response): Promise<void> =>
 
 export const getUserContacts = async (req: Request, res: Response): Promise<void> => {
   try {
+    // בדיקה שהמשתמש קיים
+    if (!req.user || !req.user._id) {
+      res.status(401).json({ success: false, error: 'לא מורשה' });
+      return;
+    }
+
     const user = await User.findById(req.user._id).select('contacts').populate({ path: 'contacts', select: 'name email avatar' });
 
     if (!user) {
@@ -107,6 +137,12 @@ export const getUserContacts = async (req: Request, res: Response): Promise<void
 
 export const addUserContact = async (req: Request, res: Response): Promise<void> => {
   try {
+    // בדיקה שהמשתמש קיים
+    if (!req.user || !req.user._id) {
+      res.status(401).json({ success: false, error: 'לא מורשה' });
+      return;
+    }
+
     const { userId } = req.body;
 
     if (!userId) {
@@ -148,6 +184,12 @@ export const addUserContact = async (req: Request, res: Response): Promise<void>
 
 export const removeUserContact = async (req: Request, res: Response): Promise<void> => {
   try {
+    // בדיקה שהמשתמש קיים
+    if (!req.user || !req.user._id) {
+      res.status(401).json({ success: false, error: 'לא מורשה' });
+      return;
+    }
+
     const contactId = req.params.id;
 
     const user = await User.findById(req.user._id);

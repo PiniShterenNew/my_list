@@ -155,13 +155,10 @@ UserSchema.methods.getRefreshToken = function (): string {
 
   // הגבל את מספר הטוקנים ל-5
   if (this.refreshTokens.length >= 5) {
-    this.refreshTokens = this.refreshTokens.slice(-4); // שמור רק את ארבעת הטוקנים האחרונים
+    this.refreshTokens.shift(); // שיטה חדשה: מסיר את הטוקן הראשון (הישן ביותר)
   }
 
   this.refreshTokens.push(refreshToken);
-  
-  // שים לב: אנחנו כבר לא קוראים ל-save כאן, זה יגרום לבעיות
-  // save צריך להיקרא בקוד החיצוני
   
   return refreshToken;
 };

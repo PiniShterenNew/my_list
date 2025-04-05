@@ -48,12 +48,14 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    // ודא שבחירת המשתמש כוללת את שדה ה-passwordHash
     const user = await User.findOne({ email }).select('+passwordHash');
     if (!user) {
       res.status(401).json({ success: false, error: 'פרטי התחברות שגויים' });
       return;
     }
 
+    // בצע השוואת סיסמה מפורשת
     const isMatch = await user.matchPassword(password);
     if (!isMatch) {
       res.status(401).json({ success: false, error: 'פרטי התחברות שגויים' });
@@ -62,6 +64,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     user.lastLogin = new Date();
     await user.save();
+
+    // הוסף לוג לדיבוג
+    logger.debug(`User logged in successfully: ${user._id}, email: ${user.email}`);
 
     sendTokenResponse(user, 200, res);
     return;

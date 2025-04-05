@@ -141,19 +141,21 @@ describe('User Model Tests', () => {
     // צור 6 טוקנים
     const tokens: string[] = [];
     for (let i = 0; i < 6; i++) {
-      tokens.push(user.getRefreshToken());
-      // שמור אחרי כל טוקן, כי הפונקציה לא שומרת יותר באופן אוטומטי
+      const token = user.getRefreshToken();
+      tokens.push(token);
       await user.save();
     }
     
     // טען את המשתמש מחדש
     const updatedUser = await User.findById(user._id);
     
-    // בדוק שיש רק 5 טוקנים (הראשון נמחק)
+    // בדוק שיש רק 5 טוקנים
     expect(updatedUser!.refreshTokens).toHaveLength(5);
     
-    // בדוק שהטוקן הראשון הוסר והאחרון קיים
+    // בדוק שהטוקן הראשון שנוצר אינו נמצא ברשימה (הוא הוסר)
     expect(updatedUser!.refreshTokens).not.toContain(tokens[0]);
+    
+    // בדוק שהטוקן האחרון שנוצר נמצא ברשימה
     expect(updatedUser!.refreshTokens).toContain(tokens[5]);
   });
 
