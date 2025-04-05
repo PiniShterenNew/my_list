@@ -4,6 +4,7 @@ import Notification from '../../models/notification.model';
 import { clearDatabase, createTestUser } from '../helpers/db.helper';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
+import { generateToken } from '../helpers/auth.helper';
 
 describe('Notification Controller Tests', () => {
   let token: string;
@@ -17,12 +18,8 @@ describe('Notification Controller Tests', () => {
     const { user, password } = await createTestUser();
     userId = new mongoose.Types.ObjectId(user._id);
     
-    // יצירת טוקן ישירות עם JWT במקום להשתמש בlogout API
-    token = jwt.sign(
-      { id: userId },
-      process.env.JWT_SECRET as string,
-      { expiresIn: '15m' }
-    );
+    // השתמש בפונקציה לייצור טוקן
+    token = generateToken(userId.toString());
   });
   
   describe('GET /api/notifications', () => {

@@ -18,14 +18,7 @@ describe('List Controller Tests', () => {
     const { user, password } = await createTestUser();
     userId = user._id;
     
-    // התחבר לקבלת טוקן
-    const loginResponse = await request(app)
-      .post('/api/auth/login')
-      .send({
-        email: user.email,
-        password: password
-      });
-    
+    // השתמש בפונקציה לייצור טוקן ישירות
     token = generateToken(userId);
   });
   

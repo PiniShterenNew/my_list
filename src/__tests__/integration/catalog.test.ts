@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import Product from '../../models/product.model';
 import Category from '../../models/category.model';
 import jwt from 'jsonwebtoken';
+import { generateToken } from '../helpers/auth.helper';
 
 describe('Catalog Controller Tests', () => {
   let token: string;
@@ -24,12 +25,8 @@ describe('Catalog Controller Tests', () => {
     const { user, password } = await createTestUser();
     userId = user._id;
     
-    // יצירת טוקן ישירות (בלי להשתמש ב-API של התחברות)
-    token = jwt.sign(
-      { id: userId },
-      process.env.JWT_SECRET as string,
-      { expiresIn: '15m' }
-    );
+    // השתמש בפונקציה לייצור טוקן
+    token = generateToken(userId);
   });
   
   describe('GET /api/catalog', () => {

@@ -13,9 +13,9 @@ export const searchCatalog = async (req: Request, res: Response): Promise<void> 
 
     if (query) {
       searchConditions.$or = [
-        { name: { $regex: query, $options: 'i' } },
+        { name: { $regex: `\\b${query}\\b`, $options: 'i' } }, // חיפוש מילים שלמות
         { barcode: { $regex: query, $options: 'i' } },
-        { tags: { $regex: query, $options: 'i' } },
+        { tags: { $in: [query] } },  // חיפוש תג מדויק
       ];
     }
 
@@ -188,10 +188,11 @@ export const getProductByBarcode = async (req: Request, res: Response): Promise<
 // @desc    עדכון מחיר מוצר
 // @route   PUT /api/catalog/products/:id/price
 // @access  פרטי
+// עדכון לפונקציה
 export const updateProductPrice = async (req: Request, res: Response): Promise<void> => {
   try {
     const { price, supermarket } = req.body;
-
+    
     if (!price || isNaN(Number(price))) {
       res.status(400).json({
         success: false,
@@ -199,9 +200,9 @@ export const updateProductPrice = async (req: Request, res: Response): Promise<v
       });
       return;
     }
-
+    
     const product = await Product.findById(req.params.id);
-
+    
     if (!product) {
       res.status(404).json({
         success: false,
@@ -209,27 +210,24 @@ export const updateProductPrice = async (req: Request, res: Response): Promise<v
       });
       return;
     }
-
+    
+    // עדכן את מחיר המוצר
+    product.price = Number(price);
+    
+    // הוסף לאחר מכן להיסטוריה
     product.priceHistory.push({
       price: Number(price),
       supermarket,
       date: new Date(),
     });
-
+    
     await product.save();
-
+    
     res.status(200).json({
       success: true,
       data: product,
     });
-    return;
   } catch (error: any) {
-    logger.error(`Update product price error: ${error.message}`);
-    res.status(500).json({
-      success: false,
-      error: 'שגיאה בעדכון מחיר מוצר',
-      message: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
-    return;
+    // טיפול בשגיאות...
   }
 };

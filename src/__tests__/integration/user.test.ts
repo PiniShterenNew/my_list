@@ -4,6 +4,7 @@ import User from '../../models/user.model';
 import { clearDatabase, createTestUser } from '../helpers/db.helper';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
+import { generateToken } from '../helpers/auth.helper';
 
 describe('User Controller Tests', () => {
   let token: string;
@@ -17,12 +18,8 @@ describe('User Controller Tests', () => {
     const { user, password } = await createTestUser();
     userId = user._id;
     
-    // יצירת טוקן ישירות במקום להשתמש ב-login API
-    token = jwt.sign(
-      { id: userId },
-      process.env.JWT_SECRET as string,
-      { expiresIn: '15m' }
-    );
+    // השתמש בפונקציה לייצור טוקן
+    token = generateToken(userId);
   });
   
   describe('GET /api/users/me', () => {

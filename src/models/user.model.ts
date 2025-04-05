@@ -155,9 +155,9 @@ UserSchema.methods.getRefreshToken = function (): string {
 
   // הגבל את מספר הטוקנים ל-5
   if (this.refreshTokens.length >= 5) {
-    this.refreshTokens.shift(); // שיטה חדשה: מסיר את הטוקן הראשון (הישן ביותר)
+    // הסר את הטוקן הישן ביותר
+    this.refreshTokens = this.refreshTokens.slice(1);
   }
-
   this.refreshTokens.push(refreshToken);
   
   return refreshToken;

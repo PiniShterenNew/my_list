@@ -5,6 +5,7 @@ import List from '../../models/list.model';
 import ListItem from '../../models/listItem.model';
 import { clearDatabase, createTestUser, createTestList, createTestListItem, createTestCategories } from '../helpers/db.helper';
 import mongoose from 'mongoose';
+import { generateToken } from '../helpers/auth.helper';
 
 describe('List Item Controller Tests', () => {
   let token: string;
@@ -22,15 +23,8 @@ describe('List Item Controller Tests', () => {
     const { user, password } = await createTestUser();
     userId = user._id;
     
-    // התחבר לקבלת טוקן
-    const loginResponse = await request(app)
-      .post('/api/auth/login')
-      .send({
-        email: user.email,
-        password: password
-      });
-    
-    token = loginResponse.body.accessToken;
+    // השתמש בפונקציה לייצור טוקן ישירות
+    token = generateToken(userId);
     
     // צור רשימה לבדיקות
     const list = await createTestList(userId, {
