@@ -13,9 +13,9 @@ export const searchCatalog = async (req: Request, res: Response): Promise<void> 
 
     if (query) {
       searchConditions.$or = [
-        { name: { $regex: `\\b${query}\\b`, $options: 'i' } }, // חיפוש מילים שלמות
+        { name: { $regex: query, $options: 'i' } }, // חיפוש פשוט לפי תת-מחרוזת
         { barcode: { $regex: query, $options: 'i' } },
-        { tags: { $in: [query] } },  // חיפוש תג מדויק
+        { tags: { $in: [query] } }
       ];
     }
 

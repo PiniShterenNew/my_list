@@ -39,7 +39,7 @@ const ListItemSchema: Schema = new Schema({
   category: {
     main: {
       type: String,
-      required: [true, 'נא לבחור קטגוריה ראשית'],
+      // required: [true, 'נא לבחור קטגוריה ראשית'],
     },
     sub: {
       type: String,

@@ -118,14 +118,14 @@ export const addListItem = async (req: Request, res: Response): Promise<void> =>
       }
     }
 
-    // וודא שיש קטגוריה ראשית
-    if (!req.body.category || !req.body.category.main) {
-      res.status(400).json({
-        success: false,
-        error: 'נא לספק קטגוריה ראשית לפריט',
-      });
-      return;
-    }
+    // // וודא שיש קטגוריה ראשית
+    // if (!req.body.category || !req.body.category.main) {
+    //   res.status(400).json({
+    //     success: false,
+    //     error: 'נא לספק קטגוריה ראשית לפריט',
+    //   });
+    //   return;
+    // }
 
     // צור את הפריט
     const item = await ListItem.create(req.body);
