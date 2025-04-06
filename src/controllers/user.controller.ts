@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
 import User from '../models/user.model';
 import logger from '../utils/logger';
+import { IUser } from '../models/user.model';
+
+// פונקציות עזר - לא משנה את החתימות המקוריות של הפונקציות
 
 export const getUserProfile = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -212,3 +215,13 @@ export const removeUserContact = async (req: Request, res: Response): Promise<vo
     res.status(500).json({ success: false, error: 'שגיאה בהסרת איש קשר', message: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 };
+
+// הוספת הרחבה לממשק Request של Express
+declare global {
+  namespace Express {
+    interface Request {
+      user: IUser & { _id: string };
+      list?: any;
+    }
+  }
+}

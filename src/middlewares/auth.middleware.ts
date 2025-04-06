@@ -4,6 +4,12 @@ import User, { IUser } from '../models/user.model';
 import List from '../models/list.model';
 import logger from '../utils/logger';
 
+// הגדרת ממשק מורחב לבקשות
+interface IExtendedRequest extends Request {
+  user: IUser & { _id: string };
+  list?: any;
+}
+
 // טיפוס להרשאות רשימה
 type ListPermission = 'view' | 'edit' | 'admin';
 
@@ -50,8 +56,8 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
 
       // הוסף את המשתמש לבקשה
       const userObj = user.toObject();
-      req.user = userObj as IUser & { _id: string };
-      req.user._id = user._id?.toString() || user.id?.toString();
+      (req as IExtendedRequest).user = userObj as IUser & { _id: string };
+      (req as IExtendedRequest).user._id = user._id?.toString() || user.id?.toString();
       next();
     } catch (error) {
       logger.error(`Token verification error: ${error}`);
@@ -91,7 +97,11 @@ export const checkListPermission = (requiredPermission: ListPermission) => {
       }
 
       // בדוק הרשאות
-      const permissionResult = await checkUserListPermission(String(req.user._id), String(listId), requiredPermission);
+      const permissionResult = await checkUserListPermission(
+        String((req as IExtendedRequest).user._id), 
+        String(listId), 
+        requiredPermission
+      );
       
       if (!permissionResult.hasPermission) {
         res.status(403).json({
@@ -103,7 +113,7 @@ export const checkListPermission = (requiredPermission: ListPermission) => {
 
       // הוסף את הרשימה לבקשה אם נמצאה
       if (permissionResult.list) {
-        req.list = permissionResult.list;
+        (req as IExtendedRequest).list = permissionResult.list;
       }
 
       next();
