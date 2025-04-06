@@ -1,6 +1,6 @@
 const http = require('http');
 const { Server: SocketServer } = require('socket.io');
-require("./types/express/index")
+// Type definitions are automatically included by TypeScript, no need to require them
 const { app } = require('./app');
 const { connectDB } = require('./config/db');
 const logger = require('./utils/logger');
