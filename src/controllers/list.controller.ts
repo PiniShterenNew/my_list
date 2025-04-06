@@ -49,7 +49,7 @@ export const createList = async (req: Request, res: Response): Promise<void> => 
     // הוסף פעולה לדף ההיסטוריה
     list.history.push({
       action: 'create',
-      userId: req.user._id,
+      userId: new mongoose.Types.ObjectId(req.user._id.toString()),
       timestamp: new Date(),
       details: { name: list.name }
     });
@@ -77,42 +77,48 @@ export const createList = async (req: Request, res: Response): Promise<void> => 
 // @access  פרטי
 export const getList = async (req: Request, res: Response): Promise<void> => {
   try {
-    const list = await List.findById(req.params.id)
-      .populate({
-        path: 'owner',
-        select: 'name avatar',
-      })
-      .populate({
-        path: 'sharedWith.userId',
-        select: 'name avatar email',
-      });
+    // השתמש ברשימה שכבר נבדקה ב-middleware
+    if (!req.list) {
+      // אם מסיבה כלשהי הרשימה לא קיימת בבקשה, טען אותה
+      const list = await List.findById(req.params.id)
+        .populate({
+          path: 'owner',
+          select: 'name avatar',
+        })
+        .populate({
+          path: 'sharedWith.userId',
+          select: 'name avatar email',
+        });
 
-    if (!list) {
-      res.status(404).json({
-        success: false,
-        error: 'הרשימה לא נמצאה',
+      if (!list) {
+        res.status(404).json({
+          success: false,
+          error: 'הרשימה לא נמצאה',
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        data: list,
       });
-      return;
+    } else {
+      // השתמש ברשימה שכבר נבדקה ונטענה ב-middleware
+      const populatedList = await List.findById(req.list._id)
+        .populate({
+          path: 'owner',
+          select: 'name avatar',
+        })
+        .populate({
+          path: 'sharedWith.userId',
+          select: 'name avatar email',
+        });
+
+      res.status(200).json({
+        success: true,
+        data: populatedList,
+      });
     }
-
-    // בדוק אם המשתמש הוא הבעלים או שהרשימה משותפת איתו
-    const isOwner = list.owner._id.toString() === req.user._id.toString();
-    const isShared = list.sharedWith.some(
-      (share: any) => share.userId._id.toString() === req.user._id.toString()
-    );
-
-    if (!isOwner && !isShared) {
-      res.status(403).json({
-        success: false,
-        error: 'אין לך הרשאה לגשת לרשימה זו',
-      });
-      return;
-    }
-
-    res.status(200).json({
-      success: true,
-      data: list,
-    });
     return;
   } catch (error: any) {
     logger.error(`Get list error: ${error.message}`);
@@ -130,9 +136,8 @@ export const getList = async (req: Request, res: Response): Promise<void> => {
 // @access  פרטי (בעלים או הרשאת עריכה)
 export const updateList = async (req: Request, res: Response): Promise<void> => {
   try {
-    let list = await List.findById(req.params.id);
-
-    if (!list) {
+    // השתמש ברשימה שכבר נבדקה ב-middleware
+    if (!req.list) {
       res.status(404).json({
         success: false,
         error: 'הרשימה לא נמצאה',
@@ -140,44 +145,33 @@ export const updateList = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    // בדוק הרשאות
-    const isOwner = list.owner.toString() === req.user._id.toString();
-    const shareData = list.sharedWith.find(
-      (share: any) => share.userId.toString() === req.user._id.toString()
-    );
-    
-    const hasEditPermission = shareData && 
-      (shareData.permissions === 'edit' || shareData.permissions === 'admin');
-
-    if (!isOwner && !hasEditPermission) {
-      res.status(403).json({
-        success: false,
-        error: 'אין לך הרשאה לעדכן רשימה זו',
-      });
-      return;
-    }
-
     // עדכן את הרשימה
-    list = await List.findByIdAndUpdate(req.params.id, req.body, {
+    const updatedList = await List.findByIdAndUpdate(req.list._id, req.body, {
       new: true,
       runValidators: true,
     });
 
+    if (!updatedList) {
+      res.status(404).json({
+        success: false,
+        error: 'הרשימה לא נמצאה',
+      });
+      return;
+    }
+
     // הוסף פעולה לדף ההיסטוריה
-    list?.history.push({
+    updatedList.history.push({
       action: 'update',
-      userId: req.user._id,
+      userId: new mongoose.Types.ObjectId(req.user._id.toString()),
       timestamp: new Date(),
       details: req.body
     });
     
-if (list) {
-  await list.save();
-}
+    await updatedList.save();
 
     res.status(200).json({
       success: true,
-      data: list,
+      data: updatedList,
     });
     return;
   } catch (error: any) {
@@ -196,9 +190,8 @@ if (list) {
 // @access  פרטי (רק בעלים)
 export const deleteList = async (req: Request, res: Response): Promise<void> => {
   try {
-    const list = await List.findById(req.params.id);
-
-    if (!list) {
+    // השתמש ברשימה שכבר נבדקה ב-middleware
+    if (!req.list) {
       res.status(404).json({
         success: false,
         error: 'הרשימה לא נמצאה',
@@ -207,7 +200,9 @@ export const deleteList = async (req: Request, res: Response): Promise<void> => 
     }
 
     // וודא שהמשתמש הוא הבעלים של הרשימה
-    if (list.owner.toString() !== req.user._id.toString()) {
+    // הערה: בדיקה זו מיותרת כי middleware כבר בדק הרשאות admin,
+    // אבל משאירים אותה כשכבת הגנה נוספת
+    if (req.list.owner.toString() !== req.user._id.toString()) {
       res.status(403).json({
         success: false,
         error: 'אין לך הרשאה למחוק רשימה זו',
@@ -216,10 +211,10 @@ export const deleteList = async (req: Request, res: Response): Promise<void> => 
     }
 
     // מחק את כל הפריטים ברשימה
-    await ListItem.deleteMany({ listId: list._id });
+    await ListItem.deleteMany({ listId: req.list._id });
 
     // מחק את הרשימה
-    await list.deleteOne();
+    await req.list.deleteOne();
 
     res.status(200).json({
       success: true,
@@ -252,9 +247,8 @@ export const updateListStatus = async (req: Request, res: Response): Promise<voi
       return;
     }
 
-    let list = await List.findById(req.params.id);
-
-    if (!list) {
+    // השתמש ברשימה שכבר נבדקה ב-middleware
+    if (!req.list) {
       res.status(404).json({
         success: false,
         error: 'הרשימה לא נמצאה',
@@ -262,39 +256,22 @@ export const updateListStatus = async (req: Request, res: Response): Promise<voi
       return;
     }
 
-    // בדוק הרשאות
-    const isOwner = list.owner.toString() === req.user._id.toString();
-    const shareData = list.sharedWith.find(
-      (share: any) => share.userId.toString() === req.user._id.toString()
-    );
-    
-    const hasEditPermission = shareData && 
-      (shareData.permissions === 'edit' || shareData.permissions === 'admin');
-
-    if (!isOwner && !hasEditPermission) {
-      res.status(403).json({
-        success: false,
-        error: 'אין לך הרשאה לעדכן סטטוס רשימה זו',
-      });
-      return;
-    }
-
     // עדכן את הסטטוס
-    list.status = status;
+    req.list.status = status;
     
     // הוסף פעולה לדף ההיסטוריה
-    list.history.push({
+    req.list.history.push({
       action: 'status_change',
-      userId: req.user._id,
+      userId: new mongoose.Types.ObjectId(req.user._id.toString()),
       timestamp: new Date(),
       details: { status }
     });
     
-    await list.save();
+    await req.list.save();
 
     res.status(200).json({
       success: true,
-      data: list,
+      data: req.list,
     });
     return;
   } catch (error: any) {
@@ -417,7 +394,7 @@ export const shareList = async (req: Request, res: Response): Promise<void> => {
     // הוסף פעולה לדף ההיסטוריה
     list.history.push({
       action: 'share',
-      userId: req.user._id,
+      userId: new mongoose.Types.ObjectId(req.user._id.toString()),
       timestamp: new Date(),
       details: { users }
     });
@@ -479,7 +456,7 @@ export const removeListShare = async (req: Request, res: Response): Promise<void
     // הוסף פעולה לדף ההיסטוריה
     list.history.push({
       action: 'unshare',
-      userId: req.user._id,
+      userId: new mongoose.Types.ObjectId(req.user._id.toString()),
       timestamp: new Date(),
       details: { removedUserId: userIdToRemove }
     });
@@ -557,7 +534,7 @@ export const completeShoppingList = async (req: Request, res: Response): Promise
     // הוסף פעולה לדף ההיסטוריה
     list.history.push({
       action: 'complete_shopping',
-      userId: req.user._id,
+      userId: new mongoose.Types.ObjectId(req.user._id.toString()),
       timestamp: new Date(),
       details: { itemsCount: items.length }
     });

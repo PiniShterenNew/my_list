@@ -138,13 +138,14 @@ describe('User Model Tests', () => {
     name: 'משתמש בדיקה',
   });
   
-  // צור 6 טוקנים
+  // צור 10 טוקנים
   const tokens: string[] = [];
   for (let i = 0; i < 10; i++) {
     const token = await user.getRefreshToken();
-    user.refreshTokens.push(token);
+    tokens.push(token);
+    // המתן מעט בין יצירת הטוקנים כדי להבטיח שהם יהיו שונים
+    await new Promise(resolve => setTimeout(resolve, 10));
   }
-  await user.save(); // ← שמור רק פעם אחת
   
   // טען את המשתמש מחדש
   const updatedUser = await User.findById(user._id);
@@ -152,11 +153,22 @@ describe('User Model Tests', () => {
   // בדוק שיש רק 5 טוקנים
   expect(updatedUser!.refreshTokens).toHaveLength(5);
   
-  // בדוק שהטוקן הראשון שנוצר אינו נמצא ברשימה (הוא הוסר)
-  expect(updatedUser!.refreshTokens).not.toContain(tokens[0]);
+  // מכיוון שהמתודה getRefreshToken משתמשת ב-unshift, הטוקנים האחרונים שנוצרו יהיו בתחילת המערך
+  // ולכן tokens[9] (הטוקן האחרון שנוצר) יהיה ב-refreshTokens[0]
   
-  // בדוק שהטוקן האחרון שנוצר נמצא ברשימה
-  expect(updatedUser!.refreshTokens).toContain(tokens[5]);
+  // בדוק שהטוקנים האחרונים שנוצרו נמצאים ברשימה (5 הטוקנים האחרונים)
+  for (let i = 0; i < 5; i++) {
+    // הטוקן האחרון שנוצר (tokens[9]) יהיה במיקום הראשון במערך (refreshTokens[0])
+    expect(updatedUser!.refreshTokens[i]).toBe(tokens[9 - i]);
+  }
+  
+  // בדוק שהטוקנים הישנים אינם נמצאים ברשימה
+  // הטוקנים הישנים הם הראשונים שנוצרו (אינדקסים 0-4)
+  // במקום לבדוק שהטוקנים הישנים אינם נמצאים, נבדוק שרק 5 הטוקנים האחרונים נמצאים
+  // כלומר, נוודא שהמערך refreshTokens מכיל בדיוק את 5 הטוקנים האחרונים שנוצרו
+  const lastFiveTokens = tokens.slice(5);
+  expect(updatedUser!.refreshTokens).toEqual(lastFiveTokens.reverse());
+  
 });
 
   it('should validate email format', async () => {

@@ -1,9 +1,19 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import User from '../models/user.model';
+import User, { IUser } from '../models/user.model';
+import List from '../models/list.model';
 import logger from '../utils/logger';
 
-// מידלוור להגנה על נתיבי API שדורשים אימות
+// טיפוס להרשאות רשימה
+type ListPermission = 'view' | 'edit' | 'admin';
+
+// ממשק לתוצאת בדיקת הרשאות
+interface IPermissionCheckResult {
+  hasPermission: boolean;
+  list?: any; // מחזיר את הרשימה אם נמצאה
+  error?: string;
+}
+
 export const protect = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     let token: string | undefined;
@@ -38,8 +48,10 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
         return;
       }
 
-      // שמור את המשתמש באובייקט הבקשה
-      req.user = user;
+      // הוסף את המשתמש לבקשה
+      const userObj = user.toObject();
+      req.user = userObj as IUser & { _id: string };
+      req.user._id = user._id?.toString() || user.id?.toString();
       next();
     } catch (error) {
       logger.error(`Token verification error: ${error}`);
@@ -59,58 +71,39 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
   }
 };
 
-// מידלוור לבדיקת הרשאות לרשימה ספציפית
-export const checkListPermission = (requiredPermission = 'view') => {
+/**
+ * בדיקת הרשאות משתמש לרשימה
+ * @param requiredPermission סוג ההרשאה הנדרשת (view, edit, admin)
+ * @returns פונקציית middleware שבודקת את ההרשאות
+ */
+export const checkListPermission = (requiredPermission: ListPermission) => {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { id } = req.params;
-      const userId = req.user?._id;
-
-      if (!id) {
-        next();
-        return;
-      }
-
-      const List = require('../models/list.model').default;
-      const list = await List.findById(id);
-
-      if (!list) {
-        res.status(404).json({
+      const listId = req.params.id;
+      
+      // בדוק שיש מזהה רשימה
+      if (!listId) {
+        res.status(400).json({
           success: false,
-          error: 'הרשימה לא נמצאה',
+          error: 'מזהה רשימה חסר',
         });
         return;
       }
 
-      if (list.owner.toString() === userId?.toString()) {
-        next();
-        return;
-      }
-
-      const sharedWith = list.sharedWith.find(
-        (share: any) => share.userId.toString() === userId?.toString()
-      );
-
-      if (!sharedWith) {
+      // בדוק הרשאות
+      const permissionResult = await checkUserListPermission(String(req.user._id), String(listId), requiredPermission);
+      
+      if (!permissionResult.hasPermission) {
         res.status(403).json({
           success: false,
-          error: 'אין לך הרשאה לגשת לרשימה זו',
+          error: permissionResult.error || 'אין לך הרשאה מספקת לבצע פעולה זו',
         });
         return;
       }
 
-      const permissions = {
-        view: ['view', 'edit', 'admin'],
-        edit: ['edit', 'admin'],
-        admin: ['admin'],
-      };
-
-      if (!permissions[requiredPermission as keyof typeof permissions].includes(sharedWith.permissions)) {
-        res.status(403).json({
-          success: false,
-          error: `אין לך הרשאת ${requiredPermission} לרשימה זו`,
-        });
-        return;
+      // הוסף את הרשימה לבקשה אם נמצאה
+      if (permissionResult.list) {
+        req.list = permissionResult.list;
       }
 
       next();
@@ -124,3 +117,72 @@ export const checkListPermission = (requiredPermission = 'view') => {
     }
   };
 };
+
+/**
+ * בדיקת הרשאות משתמש לרשימה
+ * @param userId מזהה המשתמש
+ * @param listId מזהה הרשימה
+ * @param requiredPermission סוג ההרשאה הנדרשת
+ * @returns תוצאת בדיקת ההרשאות
+ */
+async function checkUserListPermission(
+  userId: string,
+  listId: string,
+  requiredPermission: ListPermission
+): Promise<IPermissionCheckResult> {
+  try {
+    // מצא את הרשימה
+    const list = await List.findById(listId);
+
+    if (!list) {
+      return {
+        hasPermission: false,
+        error: 'הרשימה לא נמצאה',
+      };
+    }
+
+    // בדוק אם המשתמש הוא הבעלים
+    if (list.owner.toString() === userId) {
+      return { hasPermission: true, list };
+    }
+
+    // בדוק הרשאות משותפות
+    const sharedAccess = list.sharedWith.find(share => share.userId.toString() === userId);
+    if (sharedAccess) {
+      switch (requiredPermission) {
+        case 'view':
+          // צפייה מותרת לכל סוגי ההרשאות
+          return { hasPermission: true, list };
+        case 'edit':
+          // עריכה מותרת להרשאות edit ו-admin
+          if (['edit', 'admin'].includes(sharedAccess.permissions)) {
+            return { hasPermission: true, list };
+          }
+          return {
+            hasPermission: false,
+            error: 'אין לך הרשאה מספקת לבצע פעולה זו',
+          };
+        case 'admin':
+          // הרשאות admin רק למנהל
+          if (sharedAccess.permissions === 'admin') {
+            return { hasPermission: true, list };
+          }
+          return {
+            hasPermission: false,
+            error: 'אין לך הרשאה מספקת לבצע פעולה זו',
+          };
+      }
+    }
+
+    return {
+      hasPermission: false,
+      error: 'אין לך הרשאה מספקת לבצע פעולה זו',
+    };
+  } catch (error: any) {
+    logger.error(`Permission check error: ${error.message}`);
+    return {
+      hasPermission: false,
+      error: 'שגיאה בבדיקת הרשאות',
+    };
+  }
+}

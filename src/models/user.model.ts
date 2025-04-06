@@ -139,18 +139,23 @@ UserSchema.methods.getSignedJwtToken = function (): string {
 
 // מתודה ליצירת Refresh Token
 UserSchema.methods.getRefreshToken = async function () {
+  // וודא שיש סוד refresh token
+  if (!process.env.JWT_REFRESH_SECRET) {
+    throw new Error('JWT_REFRESH_SECRET לא מוגדר');
+  }
+
   const refreshToken = jwt.sign(
     { id: this._id },
-    process.env.JWT_REFRESH_SECRET!,
+    process.env.JWT_REFRESH_SECRET,
     { expiresIn: '7d' }
   );
 
-  // הגבל ל־5 טוקנים בלבד
-  if (this.refreshTokens.length >= 5) {
-    this.refreshTokens.shift(); // הסר את הישן ביותר
+  // הגבל ל-5 טוקנים בלבד
+  // הוסף את הטוקן החדש בתחילת המערך והסר את הישנים אם יש יותר מ-5
+  this.refreshTokens.unshift(refreshToken);
+  if (this.refreshTokens.length > 5) {
+    this.refreshTokens = this.refreshTokens.slice(0, 5); // שמור רק את 5 הטוקנים החדשים ביותר
   }
-
-  this.refreshTokens.push(refreshToken);
   await this.save();
 
   return refreshToken;

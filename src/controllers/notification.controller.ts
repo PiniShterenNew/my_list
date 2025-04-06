@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import Notification from '../models/notification.model';
 import logger from '../utils/logger';
 
@@ -10,7 +11,7 @@ export const getUserNotifications = async (req: Request, res: Response): Promise
     const { limit = 20, page = 1, unreadOnly = false } = req.query;
 
     const searchConditions: any = {
-      userId: req.user._id,
+      userId: new mongoose.Types.ObjectId(req.user._id),
     };
 
     if (unreadOnly === 'true') {
@@ -27,7 +28,7 @@ export const getUserNotifications = async (req: Request, res: Response): Promise
     const total = await Notification.countDocuments(searchConditions);
 
     const unreadCount = await Notification.countDocuments({
-      userId: req.user._id,
+      userId: new mongoose.Types.ObjectId(req.user._id),
       read: false,
     });
 
@@ -101,7 +102,7 @@ export const markNotificationRead = async (req: Request, res: Response): Promise
 export const markAllNotificationsRead = async (req: Request, res: Response): Promise<void> => {
   try {
     const result = await Notification.updateMany(
-      { userId: req.user._id, read: false },
+      { userId: new mongoose.Types.ObjectId(req.user._id), read: false },
       { read: true }
     );
 
@@ -150,6 +151,10 @@ export const deleteNotification = async (req: Request, res: Response): Promise<v
       success: true,
       message: 'ההתראה נמחקה בהצלחה',
     });
+    
+    // Note: The code below was causing TypeScript errors and appears to be unnecessary
+    // Creating a new notification after deleting one doesn't make logical sense in this context
+    // If this functionality is needed, it should be implemented properly with defined variables
   } catch (error: any) {
     logger.error(`Delete notification error: ${error.message}`);
     res.status(500).json({
